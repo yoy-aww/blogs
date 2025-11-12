@@ -10,7 +10,8 @@
 - **`hexo-dev.sh`** - 开发模式启动脚本
 
 ### 🛑 停止相关
-- **`hexo-stop.sh`** - 停止 Hexo 服务器
+- **`hexo-stop.sh`** - 智能停止 Hexo 服务器（推荐）
+- **`hexo-kill.sh`** - 强制停止端口占用进程（谨慎使用）
 
 ### 📊 状态检查
 - **`hexo-status.sh`** - 详细状态检查
@@ -33,7 +34,11 @@ bash blog/sh/hexo-silent.sh
 ### 停止服务器
 
 ```bash
+# 智能停止（推荐）
 bash blog/sh/hexo-stop.sh
+
+# 强制停止所有端口占用进程（谨慎使用）
+bash blog/sh/hexo-kill.sh
 ```
 
 ### 查看状态
@@ -74,6 +79,17 @@ bash blog/sh/hexo-ps.sh
 - 脚本需要在 `blog/sh/` 目录中
 - Hexo 项目根目录需要包含 `_config.yml`
 - 需要安装 Node.js 和 npm/pnpm
+
+### 脚本功能对比
+
+| 脚本 | 用途 | 特点 |
+|------|------|------|
+| `hexo-start.sh` | 主启动脚本 | 支持正常/静默模式，显示详细日志 |
+| `hexo-silent.sh` | 后台启动 | 显示启动过程，服务器后台运行 |
+| `hexo-stop.sh` | 智能停止 | 多种停止方式，Windows/Linux 兼容 |
+| `hexo-kill.sh` | 强制停止 | 强制停止端口占用，谨慎使用 |
+| `hexo-status.sh` | 详细状态 | 完整的服务器状态检查 |
+| `hexo-ps.sh` | 快速检查 | 简单的进程状态查看 |
 
 ## 故障排除
 
