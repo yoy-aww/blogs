@@ -21,8 +21,8 @@ layout: page
 
 如果你对文章内容有任何想法或建议，欢迎与我交流：
 
-- 邮箱：[your-email@example.com]
-- 微信：[your-wechat]
+- 邮箱：1148626786@qq.com
+- 微信：yoyac-AWW
 
 ### 版权声明
 
