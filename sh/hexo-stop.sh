@@ -47,34 +47,57 @@ fi
 # 方法2: 检查 4000 端口并停止进程
 echo -e "${YELLOW}检查端口 4000 占用情况...${NC}"
 port=4000
-if netstat -an 2>/dev/null | grep -q ":$port "; then
+LISTENING_CHECK=$(netstat -tuln 2>/dev/null | grep ":$port " || ss -tuln 2>/dev/null | grep ":$port ")
+
+if [ ! -z "$LISTENING_CHECK" ]; then
     echo -e "${YELLOW}端口 $port 被占用，查找进程...${NC}"
     
-    # Windows 方法：使用 netstat 查找 PID
-    if command -v netstat > /dev/null 2>&1; then
-        # 在 Windows 上使用 netstat -ano 查找 PID
-        PID=$(netstat -ano 2>/dev/null | grep ":$port " | grep LISTENING | awk '{print $5}' | head -1)
-        if [ ! -z "$PID" ]; then
-            echo -e "${YELLOW}找到占用端口 $port 的进程 PID: $PID${NC}"
-            # 使用 taskkill (Windows) 或 kill (Unix)
-            if command -v taskkill > /dev/null 2>&1; then
-                taskkill /PID $PID /F > /dev/null 2>&1
-                echo -e "${GREEN}✓ 使用 taskkill 停止进程 $PID${NC}"
-            else
-                kill -9 $PID 2>/dev/null
-                echo -e "${GREEN}✓ 使用 kill 停止进程 $PID${NC}"
-            fi
-            STOPPED=true
-        fi
-    fi
-    
-    # Linux/Mac 方法：使用 lsof
+    # Linux 优先方法：使用 lsof
     if command -v lsof > /dev/null 2>&1; then
         PID=$(lsof -ti:$port 2>/dev/null)
         if [ ! -z "$PID" ]; then
             echo -e "${YELLOW}找到占用端口 $port 的进程 PID: $PID${NC}"
-            kill -9 $PID 2>/dev/null
-            echo -e "${GREEN}✓ 使用 lsof 停止进程 $PID${NC}"
+            # 尝试优雅停止
+            kill -TERM $PID 2>/dev/null
+            sleep 2
+            # 检查是否还在运行
+            if ps -p $PID > /dev/null 2>&1; then
+                # 强制停止
+                kill -KILL $PID 2>/dev/null
+                echo -e "${GREEN}✓ 强制停止进程 $PID${NC}"
+            else
+                echo -e "${GREEN}✓ 优雅停止进程 $PID${NC}"
+            fi
+            STOPPED=true
+        fi
+    # 备用方法：使用 fuser
+    elif command -v fuser > /dev/null 2>&1; then
+        PID=$(fuser $port/tcp 2>/dev/null | awk '{print $1}')
+        if [ ! -z "$PID" ]; then
+            echo -e "${YELLOW}找到占用端口 $port 的进程 PID: $PID${NC}"
+            kill -TERM $PID 2>/dev/null
+            sleep 2
+            if ps -p $PID > /dev/null 2>&1; then
+                kill -KILL $PID 2>/dev/null
+                echo -e "${GREEN}✓ 强制停止进程 $PID${NC}"
+            else
+                echo -e "${GREEN}✓ 优雅停止进程 $PID${NC}"
+            fi
+            STOPPED=true
+        fi
+    # Windows 方法（如果在 WSL 中）
+    elif command -v netstat > /dev/null 2>&1; then
+        PID=$(netstat -tulpn 2>/dev/null | grep ":$port " | awk '{print $7}' | cut -d'/' -f1 | head -1)
+        if [ ! -z "$PID" ] && [ "$PID" != "-" ]; then
+            echo -e "${YELLOW}找到占用端口 $port 的进程 PID: $PID${NC}"
+            kill -TERM $PID 2>/dev/null
+            sleep 2
+            if ps -p $PID > /dev/null 2>&1; then
+                kill -KILL $PID 2>/dev/null
+                echo -e "${GREEN}✓ 强制停止进程 $PID${NC}"
+            else
+                echo -e "${GREEN}✓ 优雅停止进程 $PID${NC}"
+            fi
             STOPPED=true
         fi
     fi

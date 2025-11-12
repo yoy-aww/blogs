@@ -53,15 +53,24 @@ npx hexo clean
 npx hexo generate
 echo -e "${GREEN}✓ 静态文件生成完成${NC}"
 
-# 检查 4000 端口是否可用
+# 检查 4000 端口是否可用（Linux 优化）
 PORT=4000
 echo -e "${YELLOW}检查端口 $PORT 是否可用...${NC}"
-if netstat -an 2>/dev/null | grep -q ":$PORT " || ss -tuln 2>/dev/null | grep -q ":$PORT "; then
-    echo -e "${RED}✗ 端口 $PORT 已被占用${NC}"
+
+LISTENING_CHECK=$(netstat -tuln 2>/dev/null | grep ":$PORT " || ss -tuln 2>/dev/null | grep ":$PORT ")
+if [ ! -z "$LISTENING_CHECK" ]; then
+    echo -e "${RED}✗ 端口 $PORT 正在被监听${NC}"
     echo -e "${YELLOW}请先停止占用端口 4000 的服务：${NC}"
     echo -e "${YELLOW}  bash sh/hexo-stop.sh${NC}"
     echo -e "${YELLOW}  或 bash sh/hexo-kill.sh${NC}"
     exit 1
+fi
+
+# 检查是否有临时连接
+OTHER_CONNECTIONS=$(netstat -an 2>/dev/null | grep ":$PORT " | grep -v LISTENING)
+if [ ! -z "$OTHER_CONNECTIONS" ]; then
+    echo -e "${YELLOW}⚠ 端口 $PORT 有临时连接，等待清理...${NC}"
+    sleep 2
 fi
 
 echo -e "${GREEN}✓ 端口 $PORT 可用${NC}"

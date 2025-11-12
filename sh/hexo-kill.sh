@@ -18,32 +18,38 @@ KILLED=false
 
 # 检查并强制停止占用端口 4000 的进程
 port=4000
-if netstat -an 2>/dev/null | grep -q ":$port "; then
+LISTENING_CHECK=$(netstat -tuln 2>/dev/null | grep ":$port " || ss -tuln 2>/dev/null | grep ":$port ")
+
+if [ ! -z "$LISTENING_CHECK" ]; then
     echo -e "${YELLOW}端口 $port 被占用，正在强制停止...${NC}"
     
-    # Windows 方法
-    if command -v netstat > /dev/null 2>&1; then
-        PID=$(netstat -ano 2>/dev/null | grep ":$port " | grep LISTENING | awk '{print $5}' | head -1)
-        if [ ! -z "$PID" ]; then
-            echo -e "${YELLOW}找到进程 PID: $PID${NC}"
-            if command -v taskkill > /dev/null 2>&1; then
-                taskkill /PID $PID /F > /dev/null 2>&1
-                if [ $? -eq 0 ]; then
-                    echo -e "${GREEN}✓ 强制停止进程 $PID (端口 $port)${NC}"
-                    KILLED=true
-                else
-                    echo -e "${RED}✗ 无法停止进程 $PID${NC}"
-                fi
-            fi
-        fi
-    fi
-    
-    # Linux/Mac 方法
+    # Linux 优先方法：使用 lsof
     if command -v lsof > /dev/null 2>&1; then
         PID=$(lsof -ti:$port 2>/dev/null)
         if [ ! -z "$PID" ]; then
             echo -e "${YELLOW}找到进程 PID: $PID${NC}"
-            kill -9 $PID 2>/dev/null
+            kill -KILL $PID 2>/dev/null
+            if [ $? -eq 0 ]; then
+                echo -e "${GREEN}✓ 强制停止进程 $PID (端口 $port)${NC}"
+                KILLED=true
+            else
+                echo -e "${RED}✗ 无法停止进程 $PID${NC}"
+            fi
+        fi
+    # 备用方法：使用 fuser
+    elif command -v fuser > /dev/null 2>&1; then
+        echo -e "${YELLOW}使用 fuser 强制停止端口 $port 的进程...${NC}"
+        fuser -k $port/tcp 2>/dev/null
+        if [ $? -eq 0 ]; then
+            echo -e "${GREEN}✓ 使用 fuser 强制停止了端口 $port 的进程${NC}"
+            KILLED=true
+        fi
+    # netstat 方法
+    elif command -v netstat > /dev/null 2>&1; then
+        PID=$(netstat -tulpn 2>/dev/null | grep ":$port " | awk '{print $7}' | cut -d'/' -f1 | head -1)
+        if [ ! -z "$PID" ] && [ "$PID" != "-" ]; then
+            echo -e "${YELLOW}找到进程 PID: $PID${NC}"
+            kill -KILL $PID 2>/dev/null
             if [ $? -eq 0 ]; then
                 echo -e "${GREEN}✓ 强制停止进程 $PID (端口 $port)${NC}"
                 KILLED=true

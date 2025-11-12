@@ -62,22 +62,77 @@ echo
 # 检查端口 4000 占用情况
 echo -e "${BLUE}=== 端口 4000 状态检查 ===${NC}"
 port=4000
-if netstat -an 2>/dev/null | grep -q ":$port " || ss -tuln 2>/dev/null | grep -q ":$port "; then
-    echo -e "${GREEN}✓ 端口 $port 被占用${NC}"
-    # 尝试找到占用端口的进程
-    if command -v lsof > /dev/null 2>&1; then
-        PROCESS=$(lsof -ti:$port 2>/dev/null)
-        if [ ! -z "$PROCESS" ]; then
-            echo -e "  ${YELLOW}进程 PID: $PROCESS${NC}"
+
+# 检查端口监听状态（Linux 环境）
+# 使用 Linux netstat 或 ss 命令检查端口
+if command -v ss > /dev/null 2>&1; then
+    # 优先使用 ss 命令（现代 Linux 系统）
+    LISTENING_CHECK=$(ss -tlnp 2>/dev/null | grep ":$port ")
+    if [ ! -z "$LISTENING_CHECK" ]; then
+        echo -e "${GREEN}✓ 端口 $port 正在监听${NC}"
+        
+        # 从 ss 输出获取进程信息
+        PROCESS_INFO=$(echo "$LISTENING_CHECK" | grep -o 'users:(([^)]*))' | sed 's/users:((\([^)]*\)))/\1/')
+        if [ ! -z "$PROCESS_INFO" ]; then
+            PROCESS_NAME=$(echo "$PROCESS_INFO" | cut -d',' -f1 | tr -d '"')
+            PROCESS_PID=$(echo "$PROCESS_INFO" | cut -d',' -f2)
+            echo -e "  ${YELLOW}进程名称: $PROCESS_NAME${NC}"
+            echo -e "  ${YELLOW}进程 PID: $PROCESS_PID${NC}"
+            
+            # 获取完整命令行
+            if [ ! -z "$PROCESS_PID" ] && [ -f "/proc/$PROCESS_PID/cmdline" ]; then
+                CMDLINE=$(cat /proc/$PROCESS_PID/cmdline 2>/dev/null | tr '\0' ' ')
+                if [ ! -z "$CMDLINE" ]; then
+                    echo -e "  ${YELLOW}命令行: $CMDLINE${NC}"
+                fi
+            fi
         fi
-    elif command -v netstat > /dev/null 2>&1; then
-        PROCESS=$(netstat -ano 2>/dev/null | grep ":$port " | grep LISTENING | awk '{print $5}' | head -1)
-        if [ ! -z "$PROCESS" ]; then
-            echo -e "  ${YELLOW}进程 PID: $PROCESS${NC}"
+    else
+        echo -e "${GREEN}✓ 端口 $port 完全空闲${NC}"
+    fi
+elif command -v netstat > /dev/null 2>&1; then
+    # 使用传统的 netstat 命令
+    LISTENING_CHECK=$(netstat -tlnp 2>/dev/null | grep ":$port ")
+    if [ ! -z "$LISTENING_CHECK" ]; then
+        echo -e "${GREEN}✓ 端口 $port 正在监听${NC}"
+        
+        # 从 netstat 输出获取 PID 和进程名
+        PROCESS_INFO=$(echo "$LISTENING_CHECK" | awk '{print $7}' | head -1)
+        if [ ! -z "$PROCESS_INFO" ] && [ "$PROCESS_INFO" != "-" ]; then
+            PROCESS_PID=$(echo "$PROCESS_INFO" | cut -d'/' -f1)
+            PROCESS_NAME=$(echo "$PROCESS_INFO" | cut -d'/' -f2)
+            echo -e "  ${YELLOW}进程 PID: $PROCESS_PID${NC}"
+            echo -e "  ${YELLOW}进程名称: $PROCESS_NAME${NC}"
+            
+            # 获取完整命令行
+            if [ ! -z "$PROCESS_PID" ] && [ -f "/proc/$PROCESS_PID/cmdline" ]; then
+                CMDLINE=$(cat /proc/$PROCESS_PID/cmdline 2>/dev/null | tr '\0' ' ')
+                if [ ! -z "$CMDLINE" ]; then
+                    echo -e "  ${YELLOW}命令行: $CMDLINE${NC}"
+                fi
+            fi
         fi
+    else
+        echo -e "${GREEN}✓ 端口 $port 完全空闲${NC}"
     fi
 else
-    echo -e "${RED}✗ 端口 $port 空闲${NC}"
+    # 如果没有 ss 和 netstat，使用 lsof 作为备选
+    if command -v lsof > /dev/null 2>&1; then
+        LISTENING_CHECK=$(lsof -i :$port 2>/dev/null)
+        if [ ! -z "$LISTENING_CHECK" ]; then
+            echo -e "${GREEN}✓ 端口 $port 正在监听${NC}"
+            echo -e "${YELLOW}进程信息:${NC}"
+            echo "$LISTENING_CHECK" | tail -n +2 | while read line; do
+                PROCESS_NAME=$(echo $line | awk '{print $1}')
+                PROCESS_PID=$(echo $line | awk '{print $2}')
+                echo -e "  ${YELLOW}进程名称: $PROCESS_NAME, PID: $PROCESS_PID${NC}"
+            done
+        else
+            echo -e "${GREEN}✓ 端口 $port 完全空闲${NC}"
+        fi
+    else
+        echo -e "${YELLOW}⚠ 无法检查端口状态（缺少 ss/netstat/lsof 命令）${NC}"
+    fi
 fi
 
 echo

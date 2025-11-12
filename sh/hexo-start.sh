@@ -80,11 +80,13 @@ else
     npx hexo generate > /dev/null 2>&1
 fi
 
-# 检查 4000 端口是否可用
+# 检查 4000 端口是否可用（Git Bash/Windows 环境）
 PORT=4000
-if netstat -an 2>/dev/null | grep -q ":$PORT " || ss -tuln 2>/dev/null | grep -q ":$PORT "; then
+LISTENING_CHECK=$(netstat -ano 2>/dev/null | grep ":$PORT " | grep LISTENING)
+
+if [ ! -z "$LISTENING_CHECK" ]; then
     if [ "$SILENT" = false ]; then
-        echo -e "${RED}✗ 端口 $PORT 已被占用${NC}"
+        echo -e "${RED}✗ 端口 $PORT 正在被监听${NC}"
         echo -e "${YELLOW}请先停止占用端口 4000 的服务：${NC}"
         echo -e "${YELLOW}  bash sh/hexo-stop.sh${NC}"
         echo -e "${YELLOW}  或 bash sh/hexo-kill.sh${NC}"
