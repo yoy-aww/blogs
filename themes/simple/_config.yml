@@ -1,0 +1,17 @@
+# Simple Theme Configuration
+menu:
+  Home: /
+  Archives: /archives
+  About: /about
+
+# Sidebar
+sidebar: right
+
+# Social Links
+social:
+  GitHub: https://github.com/
+  Twitter: https://twitter.com/
+
+# Footer
+footer:
+  copyright: © 2024 My Blog

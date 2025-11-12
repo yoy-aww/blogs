@@ -1,0 +1,17 @@
+<article>
+  <h1><%= page.title %></h1>
+  <time><%= date(page.date, 'YYYY-MM-DD') %></time>
+  
+  <div class="content">
+    <%- page.content %>
+  </div>
+  
+  <% if (page.tags && page.tags.length){ %>
+    <div class="tags">
+      Tags: 
+      <% page.tags.each(function(tag){ %>
+        <a href="<%- url_for(tag.path) %>">#<%= tag.name %></a>
+      <% }) %>
+    </div>
+  <% } %>
+</article>

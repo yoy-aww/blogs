@@ -1,0 +1,18 @@
+<% page.posts.each(function(post){ %>
+  <article>
+    <h2><a href="<%- url_for(post.path) %>"><%= post.title %></a></h2>
+    <time><%= date(post.date, 'YYYY-MM-DD') %></time>
+    <div class="excerpt">
+      <%- truncate(strip_html(post.content), {length: 200}) %>
+    </div>
+  </article>
+<% }) %>
+
+<% if (page.total > 1){ %>
+  <nav class="pagination">
+    <%- paginator({
+      prev_text: '← Prev',
+      next_text: 'Next →'
+    }) %>
+  </nav>
+<% } %>
