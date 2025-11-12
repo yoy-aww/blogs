@@ -8,7 +8,7 @@
   
   <% if (page.tags && page.tags.length){ %>
     <div class="tags">
-      Tags: 
+      标签: 
       <% page.tags.each(function(tag){ %>
         <a href="<%- url_for(tag.path) %>">#<%= tag.name %></a>
       <% }) %>

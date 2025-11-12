@@ -1,8 +1,8 @@
 # Simple Theme Configuration
 menu:
-  Home: /
-  Archives: /archives
-  About: /about
+  首页: /
+  归档: /archives
+  关于: /about
 
 # Sidebar
 sidebar: right
@@ -14,4 +14,4 @@ social:
 
 # Footer
 footer:
-  copyright: © 2024 My Blog
+  copyright: © 2025 创业思考博客
