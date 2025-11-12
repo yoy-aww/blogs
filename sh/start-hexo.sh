@@ -10,12 +10,20 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
+# 获取脚本所在目录并切换到 Hexo 项目根目录
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+cd "$PROJECT_ROOT"
+
 # 检查是否在正确的目录
 if [ ! -f "_config.yml" ]; then
     echo -e "${RED}错误: 未找到 _config.yml 文件${NC}"
-    echo -e "${YELLOW}请确保在 Hexo 项目根目录下运行此脚本${NC}"
+    echo -e "${YELLOW}当前目录: $(pwd)${NC}"
+    echo -e "${YELLOW}请确保脚本在 Hexo 项目的 sh 子目录中${NC}"
     exit 1
 fi
+
+echo -e "${GREEN}工作目录: $(pwd)${NC}"
 
 # 检查 node_modules 是否存在
 if [ ! -d "node_modules" ]; then
