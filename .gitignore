@@ -6,7 +6,7 @@ yarn-error.log*
 pnpm-debug.log*
 
 # Generated files
-public/
+# public/
 .deploy*/
 db.json
 
@@ -80,7 +80,7 @@ dist
 
 # Gatsby files
 .cache/
-public
+# public
 
 # Storybook build outputs
 .out
