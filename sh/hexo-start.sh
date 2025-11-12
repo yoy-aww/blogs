@@ -80,14 +80,21 @@ else
     npx hexo generate > /dev/null 2>&1
 fi
 
-# 检查端口是否被占用并启动服务器
+# 检查 4000 端口是否可用
 PORT=4000
-while netstat -an 2>/dev/null | grep -q ":$PORT " || ss -tuln 2>/dev/null | grep -q ":$PORT "; do
+if netstat -an 2>/dev/null | grep -q ":$PORT " || ss -tuln 2>/dev/null | grep -q ":$PORT "; then
     if [ "$SILENT" = false ]; then
-        echo -e "${YELLOW}端口 $PORT 已被占用，尝试端口 $((PORT+1))...${NC}"
+        echo -e "${RED}✗ 端口 $PORT 已被占用${NC}"
+        echo -e "${YELLOW}请先停止占用端口 4000 的服务：${NC}"
+        echo -e "${YELLOW}  bash sh/hexo-stop.sh${NC}"
+        echo -e "${YELLOW}  或 bash sh/hexo-kill.sh${NC}"
     fi
-    PORT=$((PORT+1))
-done
+    exit 1
+fi
+
+if [ "$SILENT" = false ]; then
+    echo -e "${GREEN}✓ 端口 $PORT 可用${NC}"
+fi
 
 if [ "$SILENT" = false ]; then
     echo -e "${GREEN}启动 Hexo 服务器...${NC}"

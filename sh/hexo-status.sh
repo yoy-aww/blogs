@@ -59,45 +59,42 @@ fi
 
 echo
 
-# 检查端口占用情况
-echo -e "${BLUE}=== 端口占用检查 ===${NC}"
-for port in 4000 4001 4002 4003 4004; do
-    if netstat -an 2>/dev/null | grep -q ":$port " || ss -tuln 2>/dev/null | grep -q ":$port "; then
-        echo -e "${GREEN}✓ 端口 $port 被占用${NC}"
-        # 尝试找到占用端口的进程
-        if command -v lsof > /dev/null 2>&1; then
-            PROCESS=$(lsof -ti:$port 2>/dev/null)
-            if [ ! -z "$PROCESS" ]; then
-                echo -e "  ${YELLOW}进程 PID: $PROCESS${NC}"
-            fi
-        elif command -v netstat > /dev/null 2>&1; then
-            PROCESS=$(netstat -tulpn 2>/dev/null | grep ":$port " | awk '{print $7}' | cut -d'/' -f1)
-            if [ ! -z "$PROCESS" ]; then
-                echo -e "  ${YELLOW}进程 PID: $PROCESS${NC}"
-            fi
+# 检查端口 4000 占用情况
+echo -e "${BLUE}=== 端口 4000 状态检查 ===${NC}"
+port=4000
+if netstat -an 2>/dev/null | grep -q ":$port " || ss -tuln 2>/dev/null | grep -q ":$port "; then
+    echo -e "${GREEN}✓ 端口 $port 被占用${NC}"
+    # 尝试找到占用端口的进程
+    if command -v lsof > /dev/null 2>&1; then
+        PROCESS=$(lsof -ti:$port 2>/dev/null)
+        if [ ! -z "$PROCESS" ]; then
+            echo -e "  ${YELLOW}进程 PID: $PROCESS${NC}"
         fi
-    else
-        echo -e "${RED}✗ 端口 $port 空闲${NC}"
+    elif command -v netstat > /dev/null 2>&1; then
+        PROCESS=$(netstat -ano 2>/dev/null | grep ":$port " | grep LISTENING | awk '{print $5}' | head -1)
+        if [ ! -z "$PROCESS" ]; then
+            echo -e "  ${YELLOW}进程 PID: $PROCESS${NC}"
+        fi
     fi
-done
+else
+    echo -e "${RED}✗ 端口 $port 空闲${NC}"
+fi
 
 echo
 
 # 检查网络连接
 echo -e "${BLUE}=== 网络连接测试 ===${NC}"
-for port in 4000 4001 4002 4003 4004; do
-    if curl -s --connect-timeout 2 http://localhost:$port > /dev/null 2>&1; then
-        echo -e "${GREEN}✓ http://localhost:$port 可访问${NC}"
-        # 尝试获取页面标题
-        TITLE=$(curl -s --connect-timeout 2 http://localhost:$port | grep -o '<title>[^<]*</title>' | sed 's/<[^>]*>//g' 2>/dev/null)
-        if [ ! -z "$TITLE" ]; then
-            echo -e "  ${YELLOW}页面标题: $TITLE${NC}"
-        fi
-        break
-    else
-        echo -e "${RED}✗ http://localhost:$port 无法访问${NC}"
+port=4000
+if curl -s --connect-timeout 2 http://localhost:$port > /dev/null 2>&1; then
+    echo -e "${GREEN}✓ http://localhost:$port 可访问${NC}"
+    # 尝试获取页面标题
+    TITLE=$(curl -s --connect-timeout 2 http://localhost:$port | grep -o '<title>[^<]*</title>' | sed 's/<[^>]*>//g' 2>/dev/null)
+    if [ ! -z "$TITLE" ]; then
+        echo -e "  ${YELLOW}页面标题: $TITLE${NC}"
     fi
-done
+else
+    echo -e "${RED}✗ http://localhost:$port 无法访问${NC}"
+fi
 
 echo
 echo -e "${BLUE}=== 快速操作 ===${NC}"

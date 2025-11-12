@@ -53,15 +53,18 @@ npx hexo clean
 npx hexo generate
 echo -e "${GREEN}✓ 静态文件生成完成${NC}"
 
-# 查找可用端口
+# 检查 4000 端口是否可用
 PORT=4000
-echo -e "${YELLOW}正在查找可用端口...${NC}"
-while netstat -an 2>/dev/null | grep -q ":$PORT " || ss -tuln 2>/dev/null | grep -q ":$PORT "; do
-    echo -e "${YELLOW}端口 $PORT 已被占用，尝试 $((PORT+1))...${NC}"
-    PORT=$((PORT+1))
-done
+echo -e "${YELLOW}检查端口 $PORT 是否可用...${NC}"
+if netstat -an 2>/dev/null | grep -q ":$PORT " || ss -tuln 2>/dev/null | grep -q ":$PORT "; then
+    echo -e "${RED}✗ 端口 $PORT 已被占用${NC}"
+    echo -e "${YELLOW}请先停止占用端口 4000 的服务：${NC}"
+    echo -e "${YELLOW}  bash sh/hexo-stop.sh${NC}"
+    echo -e "${YELLOW}  或 bash sh/hexo-kill.sh${NC}"
+    exit 1
+fi
 
-echo -e "${GREEN}✓ 使用端口: $PORT${NC}"
+echo -e "${GREEN}✓ 端口 $PORT 可用${NC}"
 
 # 启动服务器（后台运行）
 echo -e "${YELLOW}正在启动 Hexo 服务器...${NC}"

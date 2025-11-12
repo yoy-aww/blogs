@@ -44,42 +44,43 @@ if [ -f "hexo-server.log" ]; then
     rm -f hexo-server.log
 fi
 
-# 方法2: 通过端口查找并停止进程
-echo -e "${YELLOW}检查端口占用情况...${NC}"
-for port in 4000 4001 4002 4003 4004; do
-    if netstat -an 2>/dev/null | grep -q ":$port "; then
-        echo -e "${YELLOW}端口 $port 被占用，查找进程...${NC}"
-        
-        # Windows 方法：使用 netstat 查找 PID
-        if command -v netstat > /dev/null 2>&1; then
-            # 在 Windows 上使用 netstat -ano 查找 PID
-            PID=$(netstat -ano 2>/dev/null | grep ":$port " | grep LISTENING | awk '{print $5}' | head -1)
-            if [ ! -z "$PID" ]; then
-                echo -e "${YELLOW}找到占用端口 $port 的进程 PID: $PID${NC}"
-                # 使用 taskkill (Windows) 或 kill (Unix)
-                if command -v taskkill > /dev/null 2>&1; then
-                    taskkill /PID $PID /F > /dev/null 2>&1
-                    echo -e "${GREEN}✓ 使用 taskkill 停止进程 $PID${NC}"
-                else
-                    kill -9 $PID 2>/dev/null
-                    echo -e "${GREEN}✓ 使用 kill 停止进程 $PID${NC}"
-                fi
-                STOPPED=true
-            fi
-        fi
-        
-        # Linux/Mac 方法：使用 lsof
-        if command -v lsof > /dev/null 2>&1; then
-            PID=$(lsof -ti:$port 2>/dev/null)
-            if [ ! -z "$PID" ]; then
-                echo -e "${YELLOW}找到占用端口 $port 的进程 PID: $PID${NC}"
+# 方法2: 检查 4000 端口并停止进程
+echo -e "${YELLOW}检查端口 4000 占用情况...${NC}"
+port=4000
+if netstat -an 2>/dev/null | grep -q ":$port "; then
+    echo -e "${YELLOW}端口 $port 被占用，查找进程...${NC}"
+    
+    # Windows 方法：使用 netstat 查找 PID
+    if command -v netstat > /dev/null 2>&1; then
+        # 在 Windows 上使用 netstat -ano 查找 PID
+        PID=$(netstat -ano 2>/dev/null | grep ":$port " | grep LISTENING | awk '{print $5}' | head -1)
+        if [ ! -z "$PID" ]; then
+            echo -e "${YELLOW}找到占用端口 $port 的进程 PID: $PID${NC}"
+            # 使用 taskkill (Windows) 或 kill (Unix)
+            if command -v taskkill > /dev/null 2>&1; then
+                taskkill /PID $PID /F > /dev/null 2>&1
+                echo -e "${GREEN}✓ 使用 taskkill 停止进程 $PID${NC}"
+            else
                 kill -9 $PID 2>/dev/null
-                echo -e "${GREEN}✓ 使用 lsof 停止进程 $PID${NC}"
-                STOPPED=true
+                echo -e "${GREEN}✓ 使用 kill 停止进程 $PID${NC}"
             fi
+            STOPPED=true
         fi
     fi
-done
+    
+    # Linux/Mac 方法：使用 lsof
+    if command -v lsof > /dev/null 2>&1; then
+        PID=$(lsof -ti:$port 2>/dev/null)
+        if [ ! -z "$PID" ]; then
+            echo -e "${YELLOW}找到占用端口 $port 的进程 PID: $PID${NC}"
+            kill -9 $PID 2>/dev/null
+            echo -e "${GREEN}✓ 使用 lsof 停止进程 $PID${NC}"
+            STOPPED=true
+        fi
+    fi
+else
+    echo -e "${GREEN}✓ 端口 4000 未被占用${NC}"
+fi
 
 # 方法3: 查找所有 Node.js 进程中包含 hexo 的
 echo -e "${YELLOW}查找所有 Hexo 相关进程...${NC}"
@@ -128,14 +129,14 @@ fi
 echo
 if [ "$STOPPED" = true ]; then
     echo -e "${GREEN}✓ Hexo 服务器已停止${NC}"
-    # 验证端口是否已释放
+    # 验证端口 4000 是否已释放
     sleep 1
-    echo -e "${YELLOW}验证端口状态...${NC}"
-    for port in 4000 4001 4002 4003 4004; do
-        if ! netstat -an 2>/dev/null | grep -q ":$port "; then
-            echo -e "${GREEN}✓ 端口 $port 已释放${NC}"
-        fi
-    done
+    echo -e "${YELLOW}验证端口 4000 状态...${NC}"
+    if ! netstat -an 2>/dev/null | grep -q ":4000 "; then
+        echo -e "${GREEN}✓ 端口 4000 已释放${NC}"
+    else
+        echo -e "${RED}✗ 端口 4000 仍被占用${NC}"
+    fi
 else
     echo -e "${RED}✗ 未找到运行中的 Hexo 服务器${NC}"
     echo -e "${YELLOW}如果服务器仍在运行，请尝试手动停止：${NC}"
