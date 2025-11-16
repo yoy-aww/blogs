@@ -6,7 +6,7 @@ yarn-error.log*
 pnpm-debug.log*
 
 # Generated files
-# public/
+public/
 .deploy*/
 db.json
 
@@ -117,7 +117,7 @@ themes/*/node_modules/
 # Package manager lock files (optional - 根据团队需求决定)
 # pnpm-lock.yaml
 # yarn.lock
-# package-lock.json
+package-lock.json
 
 # Backup files
 *.bak
