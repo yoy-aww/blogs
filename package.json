@@ -21,6 +21,10 @@
     "hexo-renderer-marked": "^7.0.0",
     "hexo-renderer-stylus": "^3.0.1",
     "hexo-server": "^3.0.0",
-    "hexo-theme-landscape": "^1.0.0"
+    "hexo-theme-landscape": "^1.0.0",
+    "strip-ansi": "6.0.1"
+  },
+  "overrides": {
+    "strip-ansi": "6.0.1"
   }
 }
