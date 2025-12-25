@@ -82,3 +82,60 @@ footer {
   border-top: 1px solid #eee;
   color: #666;
 }
+
+/* Hexo Note 自定义样式 */
+.hexo-note {
+  margin: 20px 0;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border: 1px solid;
+  padding: 16px;
+  position: relative;
+  transition: all 0.3s ease;
+  font-size: 0.95em;
+  line-height: 1.6;
+}
+
+.hexo-note:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
+}
+
+.hexo-note .note-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+}
+
+.hexo-note .note-icon {
+  font-size: 1.1em;
+  margin-right: 6px;
+}
+
+/* 确保note内容正确显示 */
+.hexo-note p {
+  margin: 0;
+}
+
+.hexo-note ul {
+  margin-bottom: 0;
+  padding-left: 20px;
+}
+
+.hexo-note li {
+  margin-bottom: 4px;
+}
+
+.hexo-note strong {
+  font-weight: 600;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .hexo-note {
+    margin: 15px 0;
+    padding: 12px;
+    font-size: 0.9em;
+  }
+}
