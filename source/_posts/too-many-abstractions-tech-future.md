@@ -1,7 +1,7 @@
 ---
 title: 抽象层次过多：技术行业的隐忧与未来挑战
-date: 2024-12-25 14:30:00
-permalink: /2024/12/25/too-many-abstractions-tech-future/
+date: 2025-12-25 14:30:00
+permalink: /2025/12/25/too-many-abstractions-tech-future/
 tags: 
   - 技术思考
   - 软件开发
