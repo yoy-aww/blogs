@@ -139,3 +139,264 @@ footer {
     font-size: 0.9em;
   }
 }
+
+/* Virtual DOM 博客文章专用样式 */
+.post-content {
+  font-size: 16px;
+  line-height: 1.8;
+}
+
+/* 美化标题 */
+.post-content h2 {
+  color: #2c3e50;
+  border-left: 4px solid #3498db;
+  padding-left: 15px;
+  margin: 30px 0 20px 0;
+  font-size: 1.5em;
+  font-weight: 600;
+}
+
+.post-content h3 {
+  color: #34495e;
+  margin: 25px 0 15px 0;
+  font-size: 1.3em;
+  font-weight: 600;
+}
+
+/* 引用框样式 */
+.post-content blockquote {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-left: 5px solid #3498db;
+  margin: 20px 0;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+.post-content blockquote::before {
+  content: "💡";
+  font-size: 1.5em;
+  position: absolute;
+  top: 15px;
+  left: 15px;
+}
+
+.post-content blockquote p {
+  margin: 0 0 0 30px;
+  font-weight: 500;
+}
+
+/* 代码块美化 */
+.post-content pre {
+  background: #2d3748;
+  color: #e2e8f0;
+  border-radius: 8px;
+  padding: 20px;
+  margin: 20px 0;
+  overflow-x: auto;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+.post-content pre::before {
+  content: "💻 Code";
+  position: absolute;
+  top: 8px;
+  right: 15px;
+  font-size: 12px;
+  color: #a0aec0;
+  font-weight: 500;
+}
+
+.post-content code {
+  background: #f7fafc;
+  color: #e53e3e;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.9em;
+  font-weight: 500;
+}
+
+.post-content pre code {
+  background: transparent;
+  color: #e2e8f0;
+  padding: 0;
+}
+
+/* 表格美化 */
+.post-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 20px 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.post-content table th {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 15px;
+  text-align: left;
+  font-weight: 600;
+}
+
+.post-content table td {
+  padding: 12px 15px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.post-content table tr:nth-child(even) {
+  background: #f8f9fa;
+}
+
+.post-content table tr:hover {
+  background: #e8f4fd;
+  transition: background 0.3s ease;
+}
+
+/* 特殊提示框 */
+.post-content .highlight-box {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 20px;
+  border-radius: 8px;
+  margin: 20px 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* 步骤列表美化 */
+.post-content ol {
+  counter-reset: step-counter;
+  list-style: none;
+  padding-left: 0;
+}
+
+.post-content ol li {
+  counter-increment: step-counter;
+  margin: 15px 0;
+  padding: 15px 20px;
+  background: #f8f9fa;
+  border-left: 4px solid #3498db;
+  border-radius: 0 8px 8px 0;
+  position: relative;
+}
+
+.post-content ol li::before {
+  content: counter(step-counter);
+  position: absolute;
+  left: -15px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #3498db;
+  color: white;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+/* 无序列表美化 */
+.post-content ul {
+  list-style: none;
+  padding-left: 0;
+}
+
+.post-content ul li {
+  position: relative;
+  padding: 8px 0 8px 30px;
+  margin: 8px 0;
+}
+
+.post-content ul li::before {
+  content: "✨";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  font-size: 16px;
+}
+
+/* 特殊emoji列表 */
+.post-content ul li:has-text("✅")::before {
+  content: "";
+}
+
+.post-content ul li:has-text("❌")::before {
+  content: "";
+}
+
+.post-content ul li:has-text("💡")::before {
+  content: "";
+}
+
+/* 段落间距 */
+.post-content p {
+  margin: 16px 0;
+  text-align: justify;
+}
+
+/* 强调文本 */
+.post-content strong {
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+.post-content em {
+  color: #7f8c8d;
+  font-style: italic;
+}
+
+/* 链接样式 */
+.post-content a {
+  color: #3498db;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: all 0.3s ease;
+}
+
+.post-content a:hover {
+  color: #2980b9;
+  border-bottom-color: #2980b9;
+}
+
+/* 分隔线美化 */
+.post-content hr {
+  border: none;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #3498db, transparent);
+  margin: 40px 0;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .post-content {
+    font-size: 14px;
+  }
+
+  .post-content h2 {
+    font-size: 1.3em;
+  }
+
+  .post-content h3 {
+    font-size: 1.2em;
+  }
+
+  .post-content pre {
+    padding: 15px;
+    font-size: 13px;
+  }
+
+  .post-content table {
+    font-size: 14px;
+  }
+
+  .post-content ol li {
+    padding: 12px 15px;
+  }
+}
