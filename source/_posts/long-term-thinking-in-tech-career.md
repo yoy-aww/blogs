@@ -1,7 +1,7 @@
 ---
 title: 技术人的长期游戏：为什么大多数程序员都在玩错游戏
-date: 2025-01-05 14:30:00
-permalink: /2025/01/05/long-term-thinking-in-tech-career/
+date: 2026-01-05 14:30:00
+permalink: /2026/01/05/long-term-thinking-in-tech-career/
 tags: 
   - 技术成长
   - 职业规划
