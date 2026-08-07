@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>从 ComfyUI 到成片：AI 视频制作的完整本地工作流 | 创业思考博客</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/blogs/css/style.css">
+<meta name="generator" content="Hexo 8.1.1"></head>
+<body>
+  <header>
+    <h1><a href="/blogs/">创业思考博客</a></h1>
+    <nav>
+      
+        <a href="/blogs/">首页</a>
+      
+        <a href="/blogs/archives">归档</a>
+      
+        <a href="/blogs/about">关于</a>
+      
+    </nav>
+  </header>
+  
+  <main>
+    <article>
+  <h1>从 ComfyUI 到成片：AI 视频制作的完整本地工作流</h1>
+  <time>2026-08-07</time>
+  
+  <div class="content post-content">
+    <p>用 AI 生成视频这件事，最近半年已经从”能不能做”变成了”怎么做出来”。但很多人在 ComfyUI 里跑出一个视频片段后，就不知道下一步该干嘛了——那一段 4 秒、480p、8fps 的东西，和真正能发出去的产品之间，还隔着很长的一段路。</p>
+<p>这篇文章就来讲清楚这条完整链路：<strong>从 ComfyUI 生成第一帧，到最终发布到抖音、B 站、小红书上的成片</strong>，每一步该做什么、用什么工具、为什么这么做。</p>
+<p>全文大约 20 分钟读完，建议你收藏之后，一边看一边动手做。</p>
+<h2 id="先看清：ComfyUI-到底能给你什么"><a href="#先看清：ComfyUI-到底能给你什么" class="headerlink" title="先看清：ComfyUI 到底能给你什么"></a>先看清：ComfyUI 到底能给你什么</h2><p>ComfyUI 是一个本地 AI 视觉生成框架，基于节点式工作流，完全免费开源。它本身不是一个”视频生成软件”，而是一个”视觉生成引擎 + 工作流编辑器”。</p>
+<p>在 ComfyUI 里，你能跑的 AI 视频模型主要有这几类：</p>
+<table>
+<thead>
+<tr>
+<th>模型</th>
+<th>类型</th>
+<th>输入</th>
+<th>输出</th>
+<th>3060 12G 能否跑</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Wan2.1 &#x2F; Wan2.2</td>
+<td>文本→视频</td>
+<td>文字提示</td>
+<td>2-10 秒短视频</td>
+<td>能（需 lowvram）</td>
+</tr>
+<tr>
+<td>HunyuanVideo</td>
+<td>文本→视频</td>
+<td>文字提示</td>
+<td>2-10 秒短视频</td>
+<td>能（低分辨率）</td>
+</tr>
+<tr>
+<td>CogVideoX</td>
+<td>文本→视频</td>
+<td>文字提示</td>
+<td>4-6 秒短视频</td>
+<td>能（最轻量）</td>
+</tr>
+<tr>
+<td>AnimateDiff</td>
+<td>文本→视频</td>
+<td>文字&#x2F;图片</td>
+<td>4-16 帧动画</td>
+<td>能（最成熟）</td>
+</tr>
+<tr>
+<td>SVD</td>
+<td>图→视频</td>
+<td>图片</td>
+<td>2-4 秒动画</td>
+<td>勉强（12G 卡线）</td>
+</tr>
+</tbody></table>
+<p>3060 12G 之所以是 AI 视频创作的甜点卡，是因为它的 12GB 显存刚好踩在大多数视频模型的最低要求线上。合理配置能跑通上面所有模型。</p>
+<p>但是，ComfyUI 直接输出的那段视频，通常长这样：</p>
+<ul>
+<li>分辨率 480x512 或 720x1280</li>
+<li>帧率 8-24fps（观感像 PPT）</li>
+<li>时长 2-10 秒</li>
+<li>画面可能有抖动、崩坏、色彩不一致</li>
+<li>是竖版、横版还是 16:9，取决于你设的分辨率</li>
+</ul>
+<p><strong>这段视频是素材，不是成品。</strong></p>
+<h2 id="第一步：在-ComfyUI-里完成一次完整的生成工作流"><a href="#第一步：在-ComfyUI-里完成一次完整的生成工作流" class="headerlink" title="第一步：在 ComfyUI 里完成一次完整的生成工作流"></a>第一步：在 ComfyUI 里完成一次完整的生成工作流</h2><p>真正能用的工作流，至少包含下面五个环节，它们可以串在一条 ComfyUI 工作流里一次性跑完：</p>
+<h3 id="1-主模型生成"><a href="#1-主模型生成" class="headerlink" title="1. 主模型生成"></a>1. 主模型生成</h3><p>根据你想做的内容选模型。文字→视频选 Wan2.1 或 AnimateDiff；图→视频选 SVD 或 AnimateDiff + ControlNet。</p>
+<p>这一步的关键提示词技巧：<strong>描述具体动作，不要只写风格</strong>。”一只猫在奔跑” 比 “一只猫” 好一百倍，因为视频生成模型对动态描述敏感得多。</p>
+<h3 id="2-补帧（Frame-Interpolation）"><a href="#2-补帧（Frame-Interpolation）" class="headerlink" title="2. 补帧（Frame Interpolation）"></a>2. 补帧（Frame Interpolation）</h3><p>这是必做环节。</p>
+<p>AI 生成的视频通常只有 8-12fps，人眼会觉得一卡一卡的。用 RIFE &#x2F; AMT &#x2F; FLAVR 节点把帧率插到 30fps 或 60fps，观感立刻从 PPT 变成视频。</p>
+<p>3060 12G 跑 RIFE 补帧：一段 30 秒视频大概 1-3 分钟。</p>
+<h3 id="3-超分辨率（Upscale）"><a href="#3-超分辨率（Upscale）" class="headerlink" title="3. 超分辨率（Upscale）"></a>3. 超分辨率（Upscale）</h3><p>把 480p 拉到 720p 或 1080p，用 SwinIR 或 Real-ESRGAN 节点。4x 倍率下，512→2048 单张图 10-30 秒，整个视频 5-15 分钟。</p>
+<p>注意：超分不是万能的。如果原片已经糊了，超分只是把糊放大。</p>
+<h3 id="4-人脸修复"><a href="#4-人脸修复" class="headerlink" title="4. 人脸修复"></a>4. 人脸修复</h3><p>AI 生成的人脸经常崩坏——手指扭曲、五官错位、表情僵硬。用 GFPGAN 或 CodeFormer 节点修复，尤其是有人脸出镜的内容必须加这一步。</p>
+<h3 id="5-画面稳定化与色彩调整"><a href="#5-画面稳定化与色彩调整" class="headerlink" title="5. 画面稳定化与色彩调整"></a>5. 画面稳定化与色彩调整</h3><p>用 Warp 节点做光流稳定化，解决画面抖动。用 Color Correct 节点统一色调。这一步不复杂，但做了之后成片质感提升很大。</p>
+<p>把上面五步串成一条 ComfyUI 工作流，输入提示词，输出就是可用的”半成品成品”。</p>
+<h2 id="第二步：后期剪辑——这一步才叫”成品”"><a href="#第二步：后期剪辑——这一步才叫”成品”" class="headerlink" title="第二步：后期剪辑——这一步才叫”成品”"></a>第二步：后期剪辑——这一步才叫”成品”</h2><p>这是 AI 视频创作者最容易忽略的一步。</p>
+<p>AI 一次只能生成几秒，但你想发一条 1 分钟的视频，就需要生成十几段素材再拼起来。拼接、转场、节奏，这些 ComfyUI 做不了，必须靠剪辑软件。</p>
+<p>具体来说，后期剪辑要完成这些事：</p>
+<p><strong>多段素材拼接</strong></p>
+<p>AI 生成的素材每段只有几秒，1 分钟内容需要 10-20 段。在剪辑软件里把这些片段按节奏排好，是剪辑的核心工作。</p>
+<p><strong>转场与节奏</strong></p>
+<p>纯 AI 素材没有”呼吸感”。通过切镜时机、转场效果（叠化、闪白、缩放）、音效卡点，给视频注入节奏。这一层是目前 AI 视频创作的真正壁垒——同样的 AI 工具，有人做出 500 万播放，有人做出 500 播放，差的就在这里。</p>
+<p><strong>配音</strong></p>
+<p>这是降维打击。目前 90% 的 AI 视频账号没有配音，或者用的机器音。自己录，或者用 AI 配音工具（标贝、剪映配音），配上自己的文案，内容立刻有了”人味”。</p>
+<p><strong>配乐</strong></p>
+<p>配乐给情绪。用免费音乐库（剪映自带、Pixabay、YouTube Audio Library）避免版权风险。</p>
+<p><strong>字幕</strong></p>
+<p>剪映和达芬奇都有自动字幕识别，准确率对中文足够高。</p>
+<p><strong>调色与风格统一</strong></p>
+<p>AI 生成的各段素材色调往往不一致——有的偏蓝、有的偏黄、有的亮有的暗。在剪辑软件里做一次全局调色，整体感立刻上来。</p>
+<h2 id="剪辑软件怎么选"><a href="#剪辑软件怎么选" class="headerlink" title="剪辑软件怎么选"></a>剪辑软件怎么选</h2><p>3060 12G 用户的最佳选择：</p>
+<table>
+<thead>
+<tr>
+<th>软件</th>
+<th>价格</th>
+<th>推荐度</th>
+<th>适合谁</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>剪映专业版</td>
+<td>免费</td>
+<td>★★★★★</td>
+<td>绝大多数 AI 视频创作者</td>
+</tr>
+<tr>
+<td>达芬奇</td>
+<td>免费</td>
+<td>★★★★☆</td>
+<td>对调色有要求的人</td>
+</tr>
+<tr>
+<td>Premiere Pro</td>
+<td>付费</td>
+<td>★★★★☆</td>
+<td>专业剪辑需求</td>
+</tr>
+</tbody></table>
+<p>我推荐剪映专业版。它免费、上手快，最关键的是内置了 AI 配音、自动字幕、音效卡点——这些恰恰是 AI 视频创作最缺的能力。</p>
+<h2 id="第三步：输出格式适配"><a href="#第三步：输出格式适配" class="headerlink" title="第三步：输出格式适配"></a>第三步：输出格式适配</h2><p>每个平台的最佳参数不同，同一个素材要导出不同版本：</p>
+<table>
+<thead>
+<tr>
+<th>平台</th>
+<th>分辨率</th>
+<th>帧率</th>
+<th>比例</th>
+<th>时长</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>抖音</td>
+<td>1080x1920</td>
+<td>30fps</td>
+<td>9:16</td>
+<td>3 分钟+</td>
+</tr>
+<tr>
+<td>小红书</td>
+<td>1080x1920</td>
+<td>30fps</td>
+<td>9:16 或 3:4</td>
+<td>30 分钟</td>
+</tr>
+<tr>
+<td>B 站</td>
+<td>1920x1080</td>
+<td>60fps</td>
+<td>16:9</td>
+<td>30 分钟</td>
+</tr>
+<tr>
+<td>视频号</td>
+<td>1080x1920</td>
+<td>30fps</td>
+<td>9:16</td>
+<td>30 分钟</td>
+</tr>
+<tr>
+<td>快手</td>
+<td>1080x1920</td>
+<td>30fps</td>
+<td>9:16</td>
+<td>30 分钟</td>
+</tr>
+</tbody></table>
+<p>我的习惯是：在剪辑软件里做好一条主线版本，然后对需要不同分辨率和比例的平台，用达芬奇或剪映的”批量导出”功能导出多版本。</p>
+<h2 id="第四步：合规——很多人在这一步翻车"><a href="#第四步：合规——很多人在这一步翻车" class="headerlink" title="第四步：合规——很多人在这一步翻车"></a>第四步：合规——很多人在这一步翻车</h2><p>全平台对 AI 内容的要求都在收紧：</p>
+<ul>
+<li><strong>必须标注 AI 生成</strong>：抖音、快手、B 站、小红书、视频号全部要求发布时勾选”AI 生成内容”。不标会被限流甚至下架。</li>
+<li><strong>版权注意</strong>：AI 生成画面本身的版权归属目前法律上仍是灰色地带，但平台目前不追究。注意配乐版权，用免费素材库最稳。</li>
+<li><strong>真人形象</strong>：如果 AI 生成了可辨认的真人形象，涉及肖像权问题，不要用在商业内容中。</li>
+</ul>
+<h2 id="完整工具链总结"><a href="#完整工具链总结" class="headerlink" title="完整工具链总结"></a>完整工具链总结</h2><p>这是我目前自己在用的链路，适合 3060 12G 的本地创作者：</p>
+<table>
+<thead>
+<tr>
+<th>环节</th>
+<th>工具</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>生成</td>
+<td>ComfyUI（Wan2.1 &#x2F; AnimateDiff）</td>
+<td>本地免费，完全可控</td>
+</tr>
+<tr>
+<td>补帧</td>
+<td>ComfyUI（RIFE 节点）</td>
+<td>12fps → 60fps</td>
+</tr>
+<tr>
+<td>超分</td>
+<td>ComfyUI（SwinIR 节点）</td>
+<td>480p → 1080p</td>
+</tr>
+<tr>
+<td>配音</td>
+<td>剪映配音 &#x2F; 即梦 AI</td>
+<td>内置，免费</td>
+</tr>
+<tr>
+<td>配乐</td>
+<td>剪映音乐库</td>
+<td>免费无版权风险</td>
+</tr>
+<tr>
+<td>剪辑</td>
+<td>剪映专业版</td>
+<td>免费，内置字幕+转场</td>
+</tr>
+<tr>
+<td>导出</td>
+<td>按平台出不同版本</td>
+<td>9:16 给抖音&#x2F;小红书&#x2F;视频号，16:9 给 B 站</td>
+</tr>
+<tr>
+<td>发布</td>
+<td>勾选 AI 标识</td>
+<td>合规</td>
+</tr>
+</tbody></table>
+<p>整条链路零成本，3060 12G 就能跑通。</p>
+<h2 id="时间成本参考"><a href="#时间成本参考" class="headerlink" title="时间成本参考"></a>时间成本参考</h2><p>以一条 1 分钟抖音短视频为例，新手的时间分配：</p>
+<table>
+<thead>
+<tr>
+<th>步骤</th>
+<th>时间</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>构思选题 + 写文案</td>
+<td>1-2 小时</td>
+</tr>
+<tr>
+<td>ComfyUI 生成 + 后处理（12 段素材）</td>
+<td>2-6 小时</td>
+</tr>
+<tr>
+<td>剪辑软件合成</td>
+<td>1-2 小时</td>
+</tr>
+<tr>
+<td>配音 + 字幕</td>
+<td>30 分钟</td>
+</tr>
+<tr>
+<td>调色 + 导出</td>
+<td>30 分钟</td>
+</tr>
+<tr>
+<td>发布 + 标注</td>
+<td>10 分钟</td>
+</tr>
+<tr>
+<td><strong>总计（新手）</strong></td>
+<td><strong>6-12 小时</strong></td>
+</tr>
+</tbody></table>
+<p>熟练后可以压到 2-3 小时。</p>
+<h2 id="最后想说"><a href="#最后想说" class="headerlink" title="最后想说"></a>最后想说</h2><p>AI 视频的创作门槛在降低，但创作上限在提高。工具越来越强，但”做出好内容”这件事，永远取决于创意、叙事和人。</p>
+<p>用 AI 工具生成画面只是最基础的环节，真正让内容有人看、有共鸣的，是你在画面之上加的那层”人味”——你自己的文案、你自己的声音、你自己的节奏。</p>
+<p>这才是 AI 时代内容创作者的核心竞争力。</p>
+
+  </div>
+  
+  
+    <div class="tags">
+      标签: 
+      
+        <a href="/blogs/tags/AI/">#AI</a>
+      
+        <a href="/blogs/tags/ComfyUI/">#ComfyUI</a>
+      
+        <a href="/blogs/tags/%E8%A7%86%E9%A2%91%E7%94%9F%E6%88%90/">#视频生成</a>
+      
+        <a href="/blogs/tags/Wan2-1/">#Wan2.1</a>
+      
+        <a href="/blogs/tags/AnimateDiff/">#AnimateDiff</a>
+      
+        <a href="/blogs/tags/%E8%A7%86%E9%A2%91%E5%89%AA%E8%BE%91/">#视频剪辑</a>
+      
+        <a href="/blogs/tags/%E6%8A%80%E6%9C%AF%E5%AE%9E%E7%8E%B0/">#技术实现</a>
+      
+        <a href="/blogs/tags/%E5%B7%A5%E5%85%B7%E6%95%99%E7%A8%8B/">#工具教程</a>
+      
+    </div>
+  
+</article>
+  </main>
+  
+  <footer>
+    <p>© 2025 创业思考博客</p>
+  </footer>
+</body>
+</html>
