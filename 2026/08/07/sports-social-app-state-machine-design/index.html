@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>运动社交 App 组局业务流程状态机设计 | 创业思考博客</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/blogs/css/style.css">
+<meta name="generator" content="Hexo 8.1.1"></head>
+<body>
+  <header>
+    <h1><a href="/blogs/">创业思考博客</a></h1>
+    <nav>
+      
+        <a href="/blogs/">首页</a>
+      
+        <a href="/blogs/archives">归档</a>
+      
+        <a href="/blogs/about">关于</a>
+      
+    </nav>
+  </header>
+  
+  <main>
+    <article>
+  <h1>运动社交 App 组局业务流程状态机设计</h1>
+  <time>2026-08-07</time>
+  
+  <div class="content post-content">
+    <p>前几篇写了功能原型、技术方案、用户调研。现在到了最硬核的部分——<strong>组局的业务流程状态机</strong>。</p>
+<p>一个产品好不好，70% 看设计，30% 看代码。但状态机写错了，产品从第一天起就是错的。</p>
+<p>这篇文章我打算讲透：一个组局从”我想打场球”到”打完球各回各家”，中间经历了哪些状态，状态之间怎么跳转，跳转的触发条件是什么，以及 30 多个边角case怎么处理。</p>
+<h2 id="一、为什么状态机是这个产品最难的部分"><a href="#一、为什么状态机是这个产品最难的部分" class="headerlink" title="一、为什么状态机是这个产品最难的部分"></a>一、为什么状态机是这个产品最难的部分</h2><p>社交产品的状态机通常很简单——发帖、删帖、评论、点赞。</p>
+<p>组局产品的状态机复杂得多，因为：</p>
+<p><strong>涉及多个角色</strong></p>
+<p>组织者、参与者、旁观者，每个人对同一场活动看到的界面可能不同。</p>
+<p><strong>涉及时间维度</strong></p>
+<p>活动有明确的开始时间和结束时间。很多状态变化是时间触发的，不是用户触发的。</p>
+<p><strong>涉及金钱（哪怕只是场地费）</strong></p>
+<p>报名者付了钱，如果活动取消，钱怎么办？如果参与者缺席，组织者亏的怎么办？</p>
+<p><strong>涉及线下行为</strong></p>
+<p>线上报名了不等于线下到场了。怎么确认”这个人真的来了”？怎么确认”这个人真的没来”？</p>
+<p><strong>涉及信任机制</strong></p>
+<p>参与者敢不敢去一个只有陌生人的活动？组织者敢不敢取消一个已经报了 5 个人的活动？</p>
+<p>状态机设计错了，这些风险都会以”用户投诉”的形式爆出来。</p>
+<h2 id="二、核心状态机：Activity（组局）"><a href="#二、核心状态机：Activity（组局）" class="headerlink" title="二、核心状态机：Activity（组局）"></a>二、核心状态机：Activity（组局）</h2><p>组局是整个业务的核心实体。一张 Activity 表，一条记录代表一个组局。</p>
+<h3 id="状态列表"><a href="#状态列表" class="headerlink" title="状态列表"></a>状态列表</h3><table>
+<thead>
+<tr>
+<th>状态</th>
+<th>说明</th>
+<th>谁可见</th>
+<th>可否报名</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>draft</code></td>
+<td>草稿，只有组织者能看到</td>
+<td>仅组织者</td>
+<td>否</td>
+</tr>
+<tr>
+<td><code>open</code></td>
+<td>开放报名中</td>
+<td>所有人</td>
+<td>是</td>
+</tr>
+<tr>
+<td><code>ongoing</code></td>
+<td>活动中</td>
+<td>所有人</td>
+<td>否</td>
+</tr>
+<tr>
+<td><code>completed</code></td>
+<td>活动已完成</td>
+<td>所有人</td>
+<td>否</td>
+</tr>
+<tr>
+<td><code>canceled</code></td>
+<td>已取消</td>
+<td>所有人</td>
+<td>否</td>
+</tr>
+<tr>
+<td><code>no_show</code></td>
+<td>无人报名自动取消</td>
+<td>所有人</td>
+<td>否</td>
+</tr>
+</tbody></table>
+<h3 id="状态转移图"><a href="#状态转移图" class="headerlink" title="状态转移图"></a>状态转移图</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line">                  ┌──────────┐</span><br><span class="line">                  │  draft   │</span><br><span class="line">                  └────┬─────┘</span><br><span class="line">                       │ 组织者点击&quot;发布&quot;</span><br><span class="line">                       ▼</span><br><span class="line">                  ┌──────────┐</span><br><span class="line">         ┌────────│  open    │◄────────────┐</span><br><span class="line">         │        └────┬─────┘             │</span><br><span class="line">         │             │                   │</span><br><span class="line">         │      ┌──────┴──────┐            │</span><br><span class="line">         │      │             │            │</span><br><span class="line">         │      │             │            │</span><br><span class="line">┌────────┴──┐   │    ┌───────┴──┐          │</span><br><span class="line">│canceled   │   │    │  no_show │          │</span><br><span class="line">│(组织者取消) │   │    │(无人报名) │          │</span><br><span class="line">└───────────┘   │    └──────────┘          │</span><br><span class="line">                │                          │</span><br><span class="line">                │ 到达开始时间              │</span><br><span class="line">                │                          │</span><br><span class="line">                ▼                          │</span><br><span class="line">           ┌──────────┐                    │</span><br><span class="line">           │ ongoing  │                    │</span><br><span class="line">           └────┬─────┘                    │</span><br><span class="line">                │                          │</span><br><span class="line">         ┌──────┴──────┐                   │</span><br><span class="line">         │             │                   │</span><br><span class="line">         │ 组织者签到完成 │ 到达结束时间      │</span><br><span class="line">         │             │ (24h后自动完成)    │</span><br><span class="line">         ▼             ▼                   │</span><br><span class="line">    ┌──────────┐  ┌──────────┐            │</span><br><span class="line">    │completed │  │ completed│            │</span><br><span class="line">    └──────────┘  └──────────┘            │</span><br><span class="line">                                           │</span><br><span class="line">    ┌──────────┐                           │</span><br><span class="line">    │canceled  │◄──────────────────────────┘</span><br><span class="line">    │(活动中取消)│</span><br><span class="line">    └──────────┘</span><br></pre></td></tr></table></figure>
+
+<h3 id="详细状态转移表"><a href="#详细状态转移表" class="headerlink" title="详细状态转移表"></a>详细状态转移表</h3><table>
+<thead>
+<tr>
+<th>从</th>
+<th>到</th>
+<th>触发条件</th>
+<th>动作</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>draft</td>
+<td>open</td>
+<td>组织者点击”发布”</td>
+<td>组局对所有人可见，通知系统记录开放时间</td>
+</tr>
+<tr>
+<td>open</td>
+<td>ongoing</td>
+<td><code>NOW() &gt;= start_time</code>（系统定时任务）</td>
+<td>活动开始，通知所有已报名者”活动开始”，停止接受报名</td>
+</tr>
+<tr>
+<td>open</td>
+<td>canceled</td>
+<td>组织者点击”取消”</td>
+<td>所有报名者收到通知，Apply 状态全部变为 canceled</td>
+</tr>
+<tr>
+<td>open</td>
+<td>no_show</td>
+<td>开始时间前 30 分钟，报名人数 &#x3D; 0</td>
+<td>自动取消，组织者收到”活动取消”通知</td>
+</tr>
+<tr>
+<td>open</td>
+<td>draft</td>
+<td>组织者点击”修改并发布”（重发）</td>
+<td>修改后重新发布为新的 open 状态（版本号 +1）</td>
+</tr>
+<tr>
+<td>ongoing</td>
+<td>completed</td>
+<td>组织者点击”签到完成”</td>
+<td>记录完成时间，触发评价请求，通知所有参与者”活动已完成”</td>
+</tr>
+<tr>
+<td>ongoing</td>
+<td>completed</td>
+<td><code>NOW() &gt;= end_time + 24h</code> 且组织者未签到</td>
+<td>系统自动标记完成（防止组织者忘记操作）</td>
+</tr>
+<tr>
+<td>ongoing</td>
+<td>canceled</td>
+<td>组织者点击”取消”（活动中）</td>
+<td>特殊情况：活动中取消。所有 Apply 状态变为 canceled，组织者信用分 -15</td>
+</tr>
+</tbody></table>
+<h3 id="三个时间触发的边界条件"><a href="#三个时间触发的边界条件" class="headerlink" title="三个时间触发的边界条件"></a>三个时间触发的边界条件</h3><p>状态机里有些转移是<strong>时间触发</strong>的，不是<strong>用户触发</strong>的。这涉及到三个时间窗口：</p>
+<p><strong>窗口 1：报名截止</strong></p>
+<p>open 状态持续到 <code>start_time - 30 分钟</code>。</p>
+<p>在这 30 分钟内：</p>
+<ul>
+<li>如果报名人数 ≥ 2（最低要求），继续等待开始</li>
+<li>如果报名人数 &#x3D; 0，自动触发 open → no_show</li>
+<li>如果报名人数 &#x3D; 1，允许开始（组织者自己一个人也能打）</li>
+</ul>
+<p><strong>窗口 2：活动中签到</strong></p>
+<p>ongoing 状态持续到 <code>end_time</code>。</p>
+<p>在 <code>start_time</code> 到 <code>end_time</code> 之间：</p>
+<ul>
+<li>参与者可以签到（Apply 状态从 applied → checked_in）</li>
+<li>组织者可以点击”签到完成”触发 ongoing → completed</li>
+<li>参与者不可以取消报名</li>
+</ul>
+<p><strong>窗口 3：活动结束后自动完成</strong></p>
+<p><code>end_time + 24 小时</code>：</p>
+<ul>
+<li>如果组织者还未点击签到完成，系统自动将 ongoing → completed</li>
+<li>组织者收到通知：”你的活动已被系统自动标记为完成，请尽快补充评价”</li>
+</ul>
+<h3 id="为什么要-24-小时自动完成"><a href="#为什么要-24-小时自动完成" class="headerlink" title="为什么要 24 小时自动完成"></a>为什么要 24 小时自动完成</h3><p>一个组织者打完球，可能手机没电了，或者忘了点”完成”。如果不做自动完成，活动会永远卡在 ongoing 状态。</p>
+<p>24 小时是合理的：</p>
+<ul>
+<li>组织者有足够时间回来操作</li>
+<li>参与者不会等太久才收到”活动已完成”的通知</li>
+<li>给组织者足够时间回想活动细节再评价</li>
+</ul>
+<h2 id="三、核心状态机：Apply（报名）"><a href="#三、核心状态机：Apply（报名）" class="headerlink" title="三、核心状态机：Apply（报名）"></a>三、核心状态机：Apply（报名）</h2><p>一个 Activity 对应多个 Apply。Apply 状态机比 Activity 复杂得多，因为涉及”组织者确认”和”缺席判定”。</p>
+<h3 id="状态列表-1"><a href="#状态列表-1" class="headerlink" title="状态列表"></a>状态列表</h3><table>
+<thead>
+<tr>
+<th>状态</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>applied</code></td>
+<td>已报名，组织者尚未确认</td>
+</tr>
+<tr>
+<td><code>confirmed</code></td>
+<td>组织者已确认（可选步骤）</td>
+</tr>
+<tr>
+<td><code>checked_in</code></td>
+<td>已到场签到</td>
+</tr>
+<tr>
+<td><code>absent</code></td>
+<td>缺席（活动完成时仍未签到）</td>
+</tr>
+<tr>
+<td><code>canceled</code></td>
+<td>已取消报名</td>
+</tr>
+<tr>
+<td><code>no_show</code></td>
+<td>报名但组织者取消活动，自动取消</td>
+</tr>
+</tbody></table>
+<h3 id="报名确认机制：要不要组织者确认？"><a href="#报名确认机制：要不要组织者确认？" class="headerlink" title="报名确认机制：要不要组织者确认？"></a>报名确认机制：要不要组织者确认？</h3><p>这是一个关键的产品设计决策。</p>
+<p><strong>方案 A：报名即加入，无需确认</strong></p>
+<p>用户点击报名，立即进入 Apply &#x3D; confirmed 状态。</p>
+<p>优点：简单、快速、转化率高<br>缺点：组织者无法筛选参与者，可能被不想跟的人加入</p>
+<p><strong>方案 B：报名需组织者确认</strong></p>
+<p>用户点击报名，进入 Apply &#x3D; applied 状态。组织者审核后，确认或拒绝。</p>
+<p>优点：组织者有控制权，可以拒绝素质差的人<br>缺点：多了确认步骤，用户可能觉得麻烦</p>
+<p><strong>建议：混合模式</strong></p>
+<ul>
+<li>默认：报名即加入（不确认）</li>
+<li>特殊情况：组织者可以手动拒绝某个报名者（比如报名者信用分太低）</li>
+<li>人数已满后：后来报名者进入”等待名单”</li>
+</ul>
+<p>具体规则：</p>
+<table>
+<thead>
+<tr>
+<th>场景</th>
+<th>处理方式</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>报名者 &lt; 人数上限</td>
+<td>立即 confirmed</td>
+</tr>
+<tr>
+<td>报名者 &#x3D; 人数上限</td>
+<td>后来者进入 waitlist</td>
+</tr>
+<tr>
+<td>waitlist 有人取消</td>
+<td>按时间顺序从 waitlist 补位</td>
+</tr>
+<tr>
+<td>组织者手动拒绝</td>
+<td>applied → rejected（不计入人数）</td>
+</tr>
+</tbody></table>
+<h3 id="Apply-状态转移图"><a href="#Apply-状态转移图" class="headerlink" title="Apply 状态转移图"></a>Apply 状态转移图</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br></pre></td><td class="code"><pre><span class="line">                   ┌──────────┐</span><br><span class="line">                   │  applied │</span><br><span class="line">                   └────┬─────┘</span><br><span class="line">                        │</span><br><span class="line">                ┌───────┼───────┐</span><br><span class="line">                │       │       │</span><br><span class="line">     组织者确认  │  人数已满  │  组织者拒绝</span><br><span class="line">                ▼       ▼       ▼</span><br><span class="line">           ┌───────┐ ┌──────┐ ┌──────────┐</span><br><span class="line">           │confir- │ │wait- │ │ rejected │</span><br><span class="line">           │med     │ │list  │ │(不计人数) │</span><br><span class="line">           └───┬───┘ └──┬───┘ └──────────┘</span><br><span class="line">               │        │</span><br><span class="line">               │ 有人退出│</span><br><span class="line">               │ 补位    │</span><br><span class="line">               ▼        │</span><br><span class="line">           ┌──────────┐ │</span><br><span class="line">           │  applied │ └──────┐</span><br><span class="line">           └────┬─────┘        │</span><br><span class="line">                │              │</span><br><span class="line">     ┌──────────┼──────────────┤</span><br><span class="line">     │          │              │</span><br><span class="line">     │ 到达开始时间            │</span><br><span class="line">     │ 组织者未拒绝          │</span><br><span class="line">     │          │              │</span><br><span class="line">     │          ▼              │</span><br><span class="line">     │     ┌──────────┐       │</span><br><span class="line">     │     │  ongoing  │      │</span><br><span class="line">     │     │(等待签到) │      │</span><br><span class="line">     │     └────┬─────┘       │</span><br><span class="line">     │          │              │</span><br><span class="line">┌────┴──┐       │              │</span><br><span class="line">│canceled│   到达结束时间       │</span><br><span class="line">│(报名取消)│  未签到             │</span><br><span class="line">└────────┘       │              │</span><br><span class="line">                 ▼              │</span><br><span class="line">            ┌──────────┐        │</span><br><span class="line">            │  absent  │        │</span><br><span class="line">            └──────────┘        │</span><br><span class="line">                                 │</span><br><span class="line">                  ┌──────────────┴──┐</span><br><span class="line">                  │  活动已取消       │</span><br><span class="line">                  │  自动取消报名     │</span><br><span class="line">                  ▼                  │</span><br><span class="line">             ┌──────────┐            │</span><br><span class="line">             │ canceled │            │</span><br><span class="line">             └──────────┘            │</span><br></pre></td></tr></table></figure>
+
+<h3 id="Apply-状态转移表"><a href="#Apply-状态转移表" class="headerlink" title="Apply 状态转移表"></a>Apply 状态转移表</h3><table>
+<thead>
+<tr>
+<th>从</th>
+<th>到</th>
+<th>触发条件</th>
+<th>动作</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>applied</td>
+<td>confirmed</td>
+<td>报名人数 &lt; 上限，自动确认</td>
+<td>Apply 加入计数，通知组织者”新增报名者”</td>
+</tr>
+<tr>
+<td>applied</td>
+<td>waitlist</td>
+<td>报名人数 &#x3D; 上限</td>
+<td>Apply 加入等待名单，不计入人数</td>
+</tr>
+<tr>
+<td>applied</td>
+<td>rejected</td>
+<td>组织者手动拒绝</td>
+<td>不计入人数，报名者收到通知</td>
+</tr>
+<tr>
+<td>applied</td>
+<td>canceled</td>
+<td>用户主动取消（开始时间前 2h）</td>
+<td>不计入人数，释放名额</td>
+</tr>
+<tr>
+<td>confirmed</td>
+<td>canceled</td>
+<td>用户主动取消（开始时间前 2h）</td>
+<td>不计入人数，释放名额，如有 waitlist 则补位</td>
+</tr>
+<tr>
+<td>confirmed</td>
+<td>checked_in</td>
+<td>活动进行中，用户点击签到</td>
+<td>参与计数 +1</td>
+</tr>
+<tr>
+<td>confirmed</td>
+<td>absent</td>
+<td>活动完成时未签到</td>
+<td>组织者可以标记为 absent，或系统自动标记</td>
+</tr>
+<tr>
+<td>confirmed</td>
+<td>canceled</td>
+<td>组织者取消活动</td>
+<td>自动取消，不计入人数</td>
+</tr>
+<tr>
+<td>waitlist</td>
+<td>confirmed</td>
+<td>有人退出，按顺序补位</td>
+<td>从 waitlist 转为 confirmed，通知补位者</td>
+</tr>
+</tbody></table>
+<h2 id="四、组织者权限：不同状态下的可用操作"><a href="#四、组织者权限：不同状态下的可用操作" class="headerlink" title="四、组织者权限：不同状态下的可用操作"></a>四、组织者权限：不同状态下的可用操作</h2><p>组织者在不同状态下能做什么操作，这是最容易出 bug 的地方。</p>
+<table>
+<thead>
+<tr>
+<th>Activity 状态</th>
+<th>组织者能做的操作</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>draft</td>
+<td>修改标题、时间、地点、人数、费用、备注；删除</td>
+</tr>
+<tr>
+<td>open</td>
+<td>查看报名者列表；手动拒绝某个报名者；取消活动</td>
+</tr>
+<tr>
+<td>open</td>
+<td>修改时间&#x2F;地点（修改后所有报名者重新确认）</td>
+</tr>
+<tr>
+<td>ongoing</td>
+<td>点击”签到完成”（结束活动）；取消活动（活动中）</td>
+</tr>
+<tr>
+<td>ongoing</td>
+<td>给缺席者标记 absent（手动）</td>
+</tr>
+<tr>
+<td>completed</td>
+<td>查看签到情况；编辑活动备注</td>
+</tr>
+<tr>
+<td>canceled</td>
+<td>无操作</td>
+</tr>
+<tr>
+<td>no_show</td>
+<td>无操作</td>
+</tr>
+</tbody></table>
+<h3 id="时间修改的特殊处理"><a href="#时间修改的特殊处理" class="headerlink" title="时间修改的特殊处理"></a>时间修改的特殊处理</h3><p>组织者在 open 状态下修改活动时间，需要分两种情况：</p>
+<p><strong>情况一：延后</strong></p>
+<ul>
+<li>修改后的开始时间在当前时间之后</li>
+<li>所有已报名者的报名继续有效</li>
+<li>发送”活动已延期”通知给所有报名者</li>
+</ul>
+<p><strong>情况二：提前</strong></p>
+<ul>
+<li>修改后的开始时间早于当前时间</li>
+<li>不允许修改（时间不能倒流）</li>
+<li>提示”请选择开始时间在当前时间之后的时间段”</li>
+</ul>
+<p><strong>情况三：大幅修改（比如改天、改场地）</strong></p>
+<ul>
+<li>视为”新活动”，原活动自动 canceled</li>
+<li>组织者需要重新创建</li>
+<li>原报名者收到通知并可选择报名新活动</li>
+</ul>
+<p>规则：<strong>同一活动最多延期一次</strong>。避免组织者反复修改时间导致参与者混乱。</p>
+<h2 id="五、缺席判定机制"><a href="#五、缺席判定机制" class="headerlink" title="五、缺席判定机制"></a>五、缺席判定机制</h2><p>“这个人报了名但没来”——缺席怎么判定？</p>
+<p>这是产品设计中争议最大的问题。</p>
+<h3 id="缺席的两种判定方式"><a href="#缺席的两种判定方式" class="headerlink" title="缺席的两种判定方式"></a>缺席的两种判定方式</h3><p><strong>方式一：组织者手动标记</strong></p>
+<p>活动完成后，组织者点击”签到完成”时，系统弹出报名者列表，组织者逐个标记”到场”或”缺席”。</p>
+<p>优点：准确，组织者最了解现场情况<br>缺点：增加组织者操作负担，且组织者可能忘记标记</p>
+<p><strong>方式二：参与者主动签到</strong></p>
+<p>活动进行中，参与者点击”我已到场”完成签到。活动结束时，未签到的人自动判定为缺席。</p>
+<p>优点：减轻组织者负担，数据自动采集<br>缺点：参与者可能忘记签到，导致”误判缺席”</p>
+<p><strong>建议：两者结合</strong></p>
+<ul>
+<li>活动开始前 30 分钟，参与者可以通过 App 签到（Apply：applied → checked_in）</li>
+<li>活动进行中，组织者可以点击”签到完成”时确认实际到场名单</li>
+<li>组织者标记的名单优先级高于用户签到</li>
+<li>如果组织者未标记缺席，系统按签到状态判定</li>
+</ul>
+<h3 id="缺席的信用影响"><a href="#缺席的信用影响" class="headerlink" title="缺席的信用影响"></a>缺席的信用影响</h3><table>
+<thead>
+<tr>
+<th>行为</th>
+<th>信用分变化</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>准时签到</td>
+<td>+5</td>
+</tr>
+<tr>
+<td>缺席（活动完成时未签到）</td>
+<td>-10</td>
+</tr>
+<tr>
+<td>报名后 24 小时内取消</td>
+<td>不影响信用分</td>
+</tr>
+<tr>
+<td>报名后 2 小时内取消</td>
+<td>-3</td>
+</tr>
+<tr>
+<td>活动开始后取消</td>
+<td>-15</td>
+</tr>
+<tr>
+<td>组织者取消活动（非不可抗力）</td>
+<td>-15</td>
+</tr>
+<tr>
+<td>收到参与者好评</td>
+<td>+5</td>
+</tr>
+<tr>
+<td>收到参与者差评</td>
+<td>-5</td>
+</tr>
+</tbody></table>
+<p>信用分范围：50-150。低于 80 分，组织者无法发起组局，参与者无法报名他人组局。</p>
+<h3 id="缺席的上限保护"><a href="#缺席的上限保护" class="headerlink" title="缺席的上限保护"></a>缺席的上限保护</h3><p>避免恶意标记：</p>
+<ul>
+<li>组织者最多在一个活动中标记 3 个人为”缺席”（防止误操作或报复）</li>
+<li>被标记缺席的用户可以在 24 小时内申诉（说明理由，由平台客服审核）</li>
+</ul>
+<h2 id="六、报名取消规则"><a href="#六、报名取消规则" class="headerlink" title="六、报名取消规则"></a>六、报名取消规则</h2><p>取消规则是信任机制的核心。</p>
+<table>
+<thead>
+<tr>
+<th>距开始时间</th>
+<th>用户可否取消</th>
+<th>信用影响</th>
+<th>退款&#x2F;费用处理</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>&gt; 2 小时</td>
+<td>可自由取消</td>
+<td>无影响</td>
+<td>如有费用，全额退款</td>
+</tr>
+<tr>
+<td>1-2 小时</td>
+<td>可取消</td>
+<td>-3 分</td>
+<td>如有费用，退 50%</td>
+</tr>
+<tr>
+<td>30 分钟-1 小时</td>
+<td>可取消</td>
+<td>-10 分</td>
+<td>如有费用，不退</td>
+</tr>
+<tr>
+<td>&lt; 30 分钟</td>
+<td>不可取消</td>
+<td>N&#x2F;A</td>
+<td>N&#x2F;A</td>
+</tr>
+<tr>
+<td>活动开始</td>
+<td>不可取消</td>
+<td>N&#x2F;A</td>
+<td>N&#x2F;A</td>
+</tr>
+</tbody></table>
+<p>规则设计逻辑：<strong>越接近开始时间，取消成本越高</strong>。这样阻止”占着茅坑不拉屎”的行为。</p>
+<p>组织者也需要遵守类似规则：</p>
+<table>
+<thead>
+<tr>
+<th>组织者行为</th>
+<th>信用影响</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>开放报名 24 小时后取消活动</td>
+<td>-10 分</td>
+</tr>
+<tr>
+<td>活动中取消</td>
+<td>-15 分</td>
+</tr>
+<tr>
+<td>连续 3 次取消活动</td>
+<td>7 天禁止发起组局</td>
+</tr>
+<tr>
+<td>不可抗力取消（提供证据）</td>
+<td>不影响信用分</td>
+</tr>
+</tbody></table>
+<h2 id="七、信用分计算细节"><a href="#七、信用分计算细节" class="headerlink" title="七、信用分计算细节"></a>七、信用分计算细节</h2><p>信用分是陌生人社交的”信任货币”。</p>
+<h3 id="基础规则"><a href="#基础规则" class="headerlink" title="基础规则"></a>基础规则</h3><p>初始分数：100 分。</p>
+<p>加分：</p>
+<ul>
+<li>准时签到：+5</li>
+<li>收到好评：+5</li>
+<li>连续 3 次准时参加：+10</li>
+</ul>
+<p>减分：</p>
+<ul>
+<li>缺席：-10</li>
+<li>迟到签到（超过开始时间 30 分钟）：-5</li>
+<li>取消报名（2 小时内）：-3</li>
+<li>收到差评：-5</li>
+<li>组织者取消活动：-15</li>
+</ul>
+<p>加分和减分有上限：</p>
+<ul>
+<li>单次活动最高 +10 分</li>
+<li>单次活动最高 -20 分</li>
+</ul>
+<h3 id="信用分阈值与功能限制"><a href="#信用分阈值与功能限制" class="headerlink" title="信用分阈值与功能限制"></a>信用分阈值与功能限制</h3><table>
+<thead>
+<tr>
+<th>信用分</th>
+<th>可发起组局</th>
+<th>可报名</th>
+<th>可查看个人主页</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>≥ 100</td>
+<td>可</td>
+<td>可</td>
+<td>可</td>
+</tr>
+<tr>
+<td>80-99</td>
+<td>可</td>
+<td>可</td>
+<td>可（但显示”信用良好”）</td>
+</tr>
+<tr>
+<td>60-79</td>
+<td>不可（需审核）</td>
+<td>可</td>
+<td>可（显示”信用一般”）</td>
+</tr>
+<tr>
+<td>&lt; 60</td>
+<td>不可</td>
+<td>不可</td>
+<td>可（显示”信用警告”）</td>
+</tr>
+</tbody></table>
+<h3 id="信用分的展示策略"><a href="#信用分的展示策略" class="headerlink" title="信用分的展示策略"></a>信用分的展示策略</h3><p>不要在个人主页直接展示”信用分：87”——这个数字对用户没有意义。</p>
+<p>改为展示标签：</p>
+<table>
+<thead>
+<tr>
+<th>信用分</th>
+<th>标签</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>≥ 120</td>
+<td>“金牌组局达人”</td>
+</tr>
+<tr>
+<td>100-119</td>
+<td>“靠谱”</td>
+</tr>
+<tr>
+<td>80-99</td>
+<td>“信用良好”</td>
+</tr>
+<tr>
+<td>60-79</td>
+<td>“信用一般”</td>
+</tr>
+<tr>
+<td>&lt; 60</td>
+<td>“信用警告”</td>
+</tr>
+</tbody></table>
+<p>标签比数字更友好。</p>
+<h2 id="八、评价系统的状态机"><a href="#八、评价系统的状态机" class="headerlink" title="八、评价系统的状态机"></a>八、评价系统的状态机</h2><p>评价也是独立的状态机。</p>
+<h3 id="评价状态"><a href="#评价状态" class="headerlink" title="评价状态"></a>评价状态</h3><table>
+<thead>
+<tr>
+<th>状态</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>pending</code></td>
+<td>活动完成，尚未评价</td>
+</tr>
+<tr>
+<td><code>reviewed</code></td>
+<td>已评价</td>
+</tr>
+<tr>
+<td><code>disputed</code></td>
+<td>申诉中</td>
+</tr>
+<tr>
+<td><code>resolved</code></td>
+<td>申诉已处理</td>
+</tr>
+</tbody></table>
+<h3 id="评价的触发时机"><a href="#评价的触发时机" class="headerlink" title="评价的触发时机"></a>评价的触发时机</h3><ul>
+<li>组织者点击”签到完成”后，所有参与者的评价进入 <code>pending</code> 状态</li>
+<li>组织者未签到，24 小时后系统自动标记 completed，评价进入 <code>pending</code></li>
+<li>评价请求发出后 48 小时，<code>pending</code> 状态自动关闭（不再要求评价）</li>
+</ul>
+<h3 id="评价的内容限制"><a href="#评价的内容限制" class="headerlink" title="评价的内容限制"></a>评价的内容限制</h3><table>
+<thead>
+<tr>
+<th>规则</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>最低评价字数</td>
+<td>5 字（避免”好”这样无意义评价）</td>
+</tr>
+<tr>
+<td>最高评价字数</td>
+<td>200 字</td>
+</tr>
+<tr>
+<td>关键词过滤</td>
+<td>黑名单词自动过滤（脏话、人身攻击）</td>
+</tr>
+<tr>
+<td>举报机制</td>
+<td>任何评价可被举报，管理员审核</td>
+</tr>
+</tbody></table>
+<h3 id="双向评价"><a href="#双向评价" class="headerlink" title="双向评价"></a>双向评价</h3><p>活动完成后，参与者评价组织者，组织者也可以评价参与者。</p>
+<p>但组织者只能评价<strong>签到过的</strong>参与者——缺席者没有评价资格（防止报复性差评）。</p>
+<h2 id="九、30-个边角-case-清单"><a href="#九、30-个边角-case-清单" class="headerlink" title="九、30 个边角 case 清单"></a>九、30 个边角 case 清单</h2><p>以下这些是状态机设计时必须提前想到的边角情况：</p>
+<p><strong>关于报名</strong></p>
+<ol>
+<li>报名者在同一活动中重复报名（同一个人）→ 前端防抖，后端唯一约束</li>
+<li>组织者给自己报名的活动报名 → 不允许</li>
+<li>报名者被组织者拒绝后，是否还能再次报名 → 允许，视为新的报名</li>
+<li>waitlist 补位时，原 canceled 的人再次报名 → 不允许进入同一活动</li>
+<li>活动人数上限为 0 时 → 不发布（前端校验）</li>
+<li>组织者报名自己的活动后，是否占用名额 → 不占用</li>
+</ol>
+<p><strong>关于取消</strong></p>
+<ol start="7">
+<li>活动开始前 1 分钟组织者取消 → 全部报名者通知，信用分 -10</li>
+<li>活动已开始，组织者点击取消 → 视为”活动中取消”，信用分 -15</li>
+<li>活动已完成，组织者再次点击取消 → 不允许</li>
+<li>报名者在活动进行中点击取消 → 不允许</li>
+</ol>
+<p><strong>关于时间</strong></p>
+<ol start="11">
+<li>组织者修改时间为过去的时间 → 不允许，提示</li>
+<li>组织者修改时间为同一个时间 → 无变化</li>
+<li>组织者修改时间后，原报名者的确认状态 → 所有报名者重新确认（已过期）</li>
+<li>活动结束时间早于开始时间 → 不允许发布</li>
+<li>活动时长不足 1 小时 → 不允许发布（太短无法组局）</li>
+<li>活动时长超过 8 小时 → 不允许发布（过长）</li>
+<li>活动开始时间距当前时间不足 1 小时 → 允许但提示”时间较近，请确认”</li>
+</ol>
+<p><strong>关于信用</strong></p>
+<ol start="18">
+<li>信用分为 0 时，用户还能干什么 → 只能浏览，不能报名、不能发起</li>
+<li>用户信用分从 100 分跌至 59 分（-21 分），是否立即限制 → 立即限制</li>
+<li>用户申诉成功后，信用分是否恢复 → 恢复</li>
+</ol>
+<p><strong>关于数据一致性</strong></p>
+<ol start="21">
+<li>组织者点击签到完成，但参与者未签到 → 组织者可以手动标记缺席</li>
+<li>组织者未签到，24 小时后系统自动完成，参与者能否补签到 → 不允许</li>
+<li>同一用户同时参与两个时间重叠的活动 → 允许（系统提示冲突，不阻止）</li>
+<li>用户删除账号后，已报名的活动如何处理 → 报名自动取消</li>
+</ol>
+<p><strong>关于系统级</strong></p>
+<ol start="25">
+<li>服务器宕机，活动正在进行中 → 服务恢复后，状态不变</li>
+<li>数据库写入失败（网络问题）→ 前端提示”操作失败，请重试”</li>
+<li>用户离线状态下修改报名状态 → 下次上线时同步</li>
+<li>多个用户同时点击同一个活动的报名按钮 → 用数据库唯一约束防止超报</li>
+<li>活动结束后，组织者重新打开评价页面 → 只读，不可再编辑</li>
+<li>组织者修改活动信息后，已报名者是否需要重新确认 → 如果修改了时间&#x2F;地点，需要；如果只改了备注，不需要</li>
+</ol>
+<h2 id="十、实现建议"><a href="#十、实现建议" class="headerlink" title="十、实现建议"></a>十、实现建议</h2><h3 id="后端：用状态机引擎，不要用-if-else-堆"><a href="#后端：用状态机引擎，不要用-if-else-堆" class="headerlink" title="后端：用状态机引擎，不要用 if-else 堆"></a>后端：用状态机引擎，不要用 if-else 堆</h3><p>状态转移用代码实现时，不要用 20 个 if-else。</p>
+<p>推荐用有限状态机库（比如 <code>xstate</code> 或自写一个简单的状态机引擎）：</p>
+<figure class="highlight typescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">interface</span> <span class="title class_">Transition</span> &#123;</span><br><span class="line">  <span class="attr">from</span>: <span class="built_in">string</span>;</span><br><span class="line">  <span class="attr">to</span>: <span class="built_in">string</span>;</span><br><span class="line">  <span class="attr">trigger</span>: <span class="string">&#x27;user_action&#x27;</span> | <span class="string">&#x27;system_time&#x27;</span> | <span class="string">&#x27;user_event&#x27;</span>;</span><br><span class="line">  <span class="attr">action</span>: <span class="built_in">string</span>;</span><br><span class="line">  <span class="attr">guard</span>?: <span class="function">(<span class="params"><span class="attr">state</span>: <span class="title class_">Activity</span></span>) =&gt;</span> <span class="built_in">boolean</span>; <span class="comment">// 可选的守卫条件</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">const</span> <span class="attr">activityTransitions</span>: <span class="title class_">Transition</span>[] = [</span><br><span class="line">  &#123; <span class="attr">from</span>: <span class="string">&#x27;draft&#x27;</span>, <span class="attr">to</span>: <span class="string">&#x27;open&#x27;</span>, <span class="attr">trigger</span>: <span class="string">&#x27;user_action&#x27;</span>, <span class="attr">action</span>: <span class="string">&#x27;publish&#x27;</span> &#125;,</span><br><span class="line">  &#123; <span class="attr">from</span>: <span class="string">&#x27;open&#x27;</span>, <span class="attr">to</span>: <span class="string">&#x27;ongoing&#x27;</span>, <span class="attr">trigger</span>: <span class="string">&#x27;system_time&#x27;</span>, <span class="attr">action</span>: <span class="string">&#x27;auto_start&#x27;</span> &#125;,</span><br><span class="line">  &#123; <span class="attr">from</span>: <span class="string">&#x27;open&#x27;</span>, <span class="attr">to</span>: <span class="string">&#x27;canceled&#x27;</span>, <span class="attr">trigger</span>: <span class="string">&#x27;user_action&#x27;</span>, <span class="attr">action</span>: <span class="string">&#x27;cancel_by_organizer&#x27;</span> &#125;,</span><br><span class="line">  &#123; <span class="attr">from</span>: <span class="string">&#x27;open&#x27;</span>, <span class="attr">to</span>: <span class="string">&#x27;no_show&#x27;</span>, <span class="attr">trigger</span>: <span class="string">&#x27;system_time&#x27;</span>, <span class="attr">action</span>: <span class="string">&#x27;auto_no_show&#x27;</span>,</span><br><span class="line">    <span class="attr">guard</span>: <span class="function">(<span class="params">a</span>) =&gt;</span> a.<span class="property">participants</span>.<span class="property">length</span> === <span class="number">0</span> &#125;,</span><br><span class="line">  &#123; <span class="attr">from</span>: <span class="string">&#x27;ongoing&#x27;</span>, <span class="attr">to</span>: <span class="string">&#x27;completed&#x27;</span>, <span class="attr">trigger</span>: <span class="string">&#x27;user_action&#x27;</span>, <span class="attr">action</span>: <span class="string">&#x27;checkin_done&#x27;</span> &#125;,</span><br><span class="line">  &#123; <span class="attr">from</span>: <span class="string">&#x27;ongoing&#x27;</span>, <span class="attr">to</span>: <span class="string">&#x27;completed&#x27;</span>, <span class="attr">trigger</span>: <span class="string">&#x27;system_time&#x27;</span>, <span class="attr">action</span>: <span class="string">&#x27;auto_complete&#x27;</span>,</span><br><span class="line">    <span class="attr">guard</span>: <span class="function">(<span class="params">a</span>) =&gt;</span> <span class="title function_">NOW</span>() &gt; a.<span class="property">endTime</span> + 24h &#125;,</span><br><span class="line">  &#123; <span class="attr">from</span>: <span class="string">&#x27;ongoing&#x27;</span>, <span class="attr">to</span>: <span class="string">&#x27;canceled&#x27;</span>, <span class="attr">trigger</span>: <span class="string">&#x27;user_action&#x27;</span>, <span class="attr">action</span>: <span class="string">&#x27;cancel_mid_activity&#x27;</span> &#125;,</span><br><span class="line">];</span><br></pre></td></tr></table></figure>
+
+<p>这样状态转移逻辑是可读、可测试、可扩展的。</p>
+<h3 id="定时任务"><a href="#定时任务" class="headerlink" title="定时任务"></a>定时任务</h3><p>需要两个定时任务：</p>
+<p><strong>定时任务 1：活动自动开始</strong></p>
+<p>每 5 分钟检查一次，把 <code>start_time &lt;= NOW()</code> 且状态为 <code>open</code> 的活动标记为 <code>ongoing</code>。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">UPDATE</span> activities</span><br><span class="line"><span class="keyword">SET</span> status <span class="operator">=</span> <span class="string">&#x27;ongoing&#x27;</span></span><br><span class="line"><span class="keyword">WHERE</span> status <span class="operator">=</span> <span class="string">&#x27;open&#x27;</span></span><br><span class="line">  <span class="keyword">AND</span> start_time <span class="operator">&lt;=</span> NOW()</span><br><span class="line">  <span class="keyword">AND</span> NOW() <span class="operator">&gt;=</span> start_time <span class="operator">-</span> <span class="type">INTERVAL</span> <span class="string">&#x27;30 minutes&#x27;</span>;</span><br></pre></td></tr></table></figure>
+
+<p>注意：如果活动人数为 0，应标记为 <code>no_show</code> 而非 <code>ongoing</code>。</p>
+<p><strong>定时任务 2：活动自动完成</strong></p>
+<p>每 30 分钟检查一次，把 <code>end_time + 24h &lt;= NOW()</code> 且状态为 <code>ongoing</code> 的活动标记为 <code>completed</code>。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">UPDATE</span> activities</span><br><span class="line"><span class="keyword">SET</span> status <span class="operator">=</span> <span class="string">&#x27;completed&#x27;</span></span><br><span class="line"><span class="keyword">WHERE</span> status <span class="operator">=</span> <span class="string">&#x27;ongoing&#x27;</span></span><br><span class="line">  <span class="keyword">AND</span> end_time <span class="operator">+</span> <span class="type">INTERVAL</span> <span class="string">&#x27;24 hours&#x27;</span> <span class="operator">&lt;=</span> NOW();</span><br></pre></td></tr></table></figure>
+
+<h3 id="关键数据一致性"><a href="#关键数据一致性" class="headerlink" title="关键数据一致性"></a>关键数据一致性</h3><p>报名状态的一致性最重要。用数据库事务保证：</p>
+<figure class="highlight typescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">async</span> <span class="keyword">function</span> <span class="title function_">applyActivity</span>(<span class="params"><span class="attr">userId</span>: <span class="built_in">string</span>, <span class="attr">activityId</span>: <span class="built_in">string</span></span>) &#123;</span><br><span class="line">  <span class="keyword">await</span> db.<span class="title function_">transaction</span>(<span class="title function_">async</span> (tx) =&gt; &#123;</span><br><span class="line">    <span class="comment">// 1. 检查活动状态</span></span><br><span class="line">    <span class="keyword">const</span> activity = <span class="keyword">await</span> tx.<span class="property">activity</span>.<span class="title function_">findUnique</span>(&#123; <span class="attr">where</span>: &#123; <span class="attr">id</span>: activityId &#125; &#125;);</span><br><span class="line">    <span class="keyword">if</span> (activity.<span class="property">status</span> !== <span class="string">&#x27;open&#x27;</span>) <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">Error</span>(<span class="string">&#x27;活动已不能报名&#x27;</span>);</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 2. 检查是否已报名</span></span><br><span class="line">    <span class="keyword">const</span> existing = <span class="keyword">await</span> tx.<span class="property">apply</span>.<span class="title function_">findUnique</span>(&#123;</span><br><span class="line">      <span class="attr">where</span>: &#123; <span class="attr">activityId_userId</span>: &#123; activityId, userId &#125; &#125;</span><br><span class="line">    &#125;);</span><br><span class="line">    <span class="keyword">if</span> (existing) <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">Error</span>(<span class="string">&#x27;已报名&#x27;</span>);</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 3. 检查人数上限</span></span><br><span class="line">    <span class="keyword">const</span> currentCount = <span class="keyword">await</span> tx.<span class="property">apply</span>.<span class="title function_">count</span>(&#123;</span><br><span class="line">      <span class="attr">where</span>: &#123; activityId, <span class="attr">status</span>: &#123; <span class="attr">in</span>: [<span class="string">&#x27;applied&#x27;</span>, <span class="string">&#x27;confirmed&#x27;</span>] &#125; &#125;</span><br><span class="line">    &#125;);</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">if</span> (currentCount &gt;= activity.<span class="property">capacity</span>) &#123;</span><br><span class="line">      <span class="comment">// 加入 waitlist</span></span><br><span class="line">      <span class="keyword">await</span> tx.<span class="property">apply</span>.<span class="title function_">create</span>(&#123;</span><br><span class="line">        <span class="attr">data</span>: &#123; activityId, userId, <span class="attr">status</span>: <span class="string">&#x27;waitlist&#x27;</span> &#125;</span><br><span class="line">      &#125;);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      <span class="keyword">await</span> tx.<span class="property">apply</span>.<span class="title function_">create</span>(&#123;</span><br><span class="line">        <span class="attr">data</span>: &#123; activityId, userId, <span class="attr">status</span>: <span class="string">&#x27;confirmed&#x27;</span> &#125;</span><br><span class="line">      &#125;);</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="十一、最后说"><a href="#十一、最后说" class="headerlink" title="十一、最后说"></a>十一、最后说</h2><p>状态机是这个产品最”枯燥”的部分，但也是最决定性的部分。</p>
+<p>功能设计错了，可以改。技术选型错了，可以重构。但状态机错了，用户数据就会错——报名了显示没报名，活动结束了还在进行，缺席的人显示已签到。</p>
+<p>这种错误一旦发生，信任就没了。</p>
+<p>写状态机的时候，多花一点时间把边角 case 想到。上面列的 30 个 case，上线前至少验证过 20 个，你才不会在上架后因为一个边界 bug 丢一批用户。</p>
+<p>状态机写好了，这个产品就有了骨架。后面加什么功能，都可以在这套骨架上长。</p>
+
+  </div>
+  
+  
+    <div class="tags">
+      标签: 
+      
+        <a href="/blogs/tags/%E7%B3%BB%E7%BB%9F%E8%AE%BE%E8%AE%A1/">#系统设计</a>
+      
+        <a href="/blogs/tags/%E5%88%9B%E4%B8%9A/">#创业</a>
+      
+        <a href="/blogs/tags/%E8%BF%90%E5%8A%A8%E7%A4%BE%E4%BA%A4/">#运动社交</a>
+      
+        <a href="/blogs/tags/%E7%8A%B6%E6%80%81%E6%9C%BA/">#状态机</a>
+      
+        <a href="/blogs/tags/%E4%B8%9A%E5%8A%A1%E9%80%BB%E8%BE%91/">#业务逻辑</a>
+      
+        <a href="/blogs/tags/%E4%BA%A7%E5%93%81%E5%BC%80%E5%8F%91/">#产品开发</a>
+      
+    </div>
+  
+</article>
+  </main>
+  
+  <footer>
+    <p>© 2025 创业思考博客</p>
+  </footer>
+</body>
+</html>
