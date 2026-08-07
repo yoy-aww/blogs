@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>运动社交 App MVP 功能原型设计 | 创业思考博客</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/blogs/css/style.css">
+<meta name="generator" content="Hexo 8.1.1"></head>
+<body>
+  <header>
+    <h1><a href="/blogs/">创业思考博客</a></h1>
+    <nav>
+      
+        <a href="/blogs/">首页</a>
+      
+        <a href="/blogs/archives">归档</a>
+      
+        <a href="/blogs/about">关于</a>
+      
+    </nav>
+  </header>
+  
+  <main>
+    <article>
+  <h1>运动社交 App MVP 功能原型设计</h1>
+  <time>2026-08-07</time>
+  
+  <div class="content post-content">
+    <p>上一篇我写了这个产品的基本思路。这一篇，我来把它拆成可以动手做的事。</p>
+<p>不做 PPT，不做概念图。直接写<strong>功能清单、优先级、用户流程、界面描述</strong>——这些东西你可以直接拿去跟前端&#x2F;后端对需求。</p>
+<h2 id="一、产品定位再确认"><a href="#一、产品定位再确认" class="headerlink" title="一、产品定位再确认"></a>一、产品定位再确认</h2><p>先说清楚这个产品不是做什么的：</p>
+<ul>
+<li><strong>不是</strong>一个”朋友圈”——不要做发帖、点赞、评论</li>
+<li><strong>不是</strong>一个”交友平台”——不要做左滑右滑、匹配</li>
+<li><strong>不是</strong>一个”找工作的 App”——不要在首页放招聘入口</li>
+</ul>
+<p><strong>它是一个”组局工具”</strong>。用户打开 App 的唯一目的：找到一个人或者一群人，去做一件具体的事。</p>
+<p>所有设计围绕这个目的。其他的一切都是为这个目的服务的辅助功能。</p>
+<h2 id="二、MVP-功能清单（按优先级分三层）"><a href="#二、MVP-功能清单（按优先级分三层）" class="headerlink" title="二、MVP 功能清单（按优先级分三层）"></a>二、MVP 功能清单（按优先级分三层）</h2><h3 id="P0——必须做，没有就不能上线"><a href="#P0——必须做，没有就不能上线" class="headerlink" title="P0——必须做，没有就不能上线"></a>P0——必须做，没有就不能上线</h3><table>
+<thead>
+<tr>
+<th>功能</th>
+<th>说明</th>
+<th>为什么是 P0</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>手机号注册登录</td>
+<td>实名制，安全底线</td>
+<td>没有实名就无法建立信任</td>
+</tr>
+<tr>
+<td>发布组局</td>
+<td>选择时间、地点、运动类型、人数上限、费用</td>
+<td>这是产品的核心动作</td>
+</tr>
+<tr>
+<td>浏览附近组局</td>
+<td>列表 + 地图，按运动类型筛选</td>
+<td>用户打开 App 第一件事</td>
+</tr>
+<tr>
+<td>报名组局</td>
+<td>一键报名，报名后自动入群</td>
+<td>组局的”成交”动作</td>
+</tr>
+<tr>
+<td>查看个人主页</td>
+<td>显示运动偏好、历史参与记录</td>
+<td>陌生人之间的信任依据</td>
+</tr>
+<tr>
+<td>取消&#x2F;退出组局</td>
+<td>报名后可以取消</td>
+<td>基础交互完整性</td>
+</tr>
+<tr>
+<td>消息通知</td>
+<td>报名成功、组局变更、即将开始</td>
+<td>保证活动不出现空跑</td>
+</tr>
+</tbody></table>
+<h3 id="P1——上线后一个月内必须加"><a href="#P1——上线后一个月内必须加" class="headerlink" title="P1——上线后一个月内必须加"></a>P1——上线后一个月内必须加</h3><table>
+<thead>
+<tr>
+<th>功能</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>组局评价系统</td>
+<td>活动结束后双方互评，建立信用</td>
+</tr>
+<tr>
+<td>个人签到</td>
+<td>活动结束点”签到”，证明参与</td>
+</tr>
+<tr>
+<td>历史记录</td>
+<td>我参与的、我组织的、我报名但未去的</td>
+</tr>
+<tr>
+<td>场地推荐</td>
+<td>内置热门场地列表、价格、空位查询</td>
+</tr>
+<tr>
+<td>取消组局（组织者）</td>
+<td>组织者可以取消或延期组局</td>
+</tr>
+<tr>
+<td>紧急联系人</td>
+<td>活动页面展示组织者&#x2F;参与者的应急联系方式</td>
+</tr>
+</tbody></table>
+<h3 id="P2——用户量达到一定规模再加"><a href="#P2——用户量达到一定规模再加" class="headerlink" title="P2——用户量达到一定规模再加"></a>P2——用户量达到一定规模再加</h3><table>
+<thead>
+<tr>
+<th>功能</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>装备商城</td>
+<td>篮球、球衣、钓具等</td>
+</tr>
+<tr>
+<td>活动保险</td>
+<td>一键购买运动意外险</td>
+</tr>
+<tr>
+<td>勋章&#x2F;成就系统</td>
+<td>连续打卡、参与次数、运动类型徽章</td>
+</tr>
+<tr>
+<td>排行榜</td>
+<td>城市活跃排名、运动达人</td>
+</tr>
+<tr>
+<td>内容社区</td>
+<td>活动照片分享、经验帖（不是朋友圈）</td>
+</tr>
+<tr>
+<td>企业招聘入口</td>
+<td>脱敏后的用户画像，对接招聘</td>
+</tr>
+</tbody></table>
+<h2 id="三、用户流程设计"><a href="#三、用户流程设计" class="headerlink" title="三、用户流程设计"></a>三、用户流程设计</h2><h3 id="流程一：报名一个组局"><a href="#流程一：报名一个组局" class="headerlink" title="流程一：报名一个组局"></a>流程一：报名一个组局</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">打开 App</span><br><span class="line">  → 首页展示&quot;附近正在进行的组局&quot;列表</span><br><span class="line">    → 列表项显示：篮球 / 下午3点 / 浦东体育馆 / 3/6人</span><br><span class="line">    → 点进组局详情页</span><br><span class="line">      → 确认时间、地点、组织者信息、过往活动记录</span><br><span class="line">      → 点击&quot;报名&quot;</span><br><span class="line">        → 报名成功，收到入群邀请</span><br><span class="line">        → 群内自动@新人，组织者可发言</span><br><span class="line">        → 活动即将开始时，App 推送提醒</span><br></pre></td></tr></table></figure>
+
+<p>用户从打开 App 到完成报名，不超过 3 次点击。</p>
+<h3 id="流程二：组织一个组局"><a href="#流程二：组织一个组局" class="headerlink" title="流程二：组织一个组局"></a>流程二：组织一个组局</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">点击底部&quot;发起&quot;按钮</span><br><span class="line">  → 选择运动类型（篮球 / 足球 / 钓鱼 / 跑步...）</span><br><span class="line">  → 选择时间（支持自定义时间段）</span><br><span class="line">  → 选择地点（地图选点 + 搜索场地）</span><br><span class="line">  → 填写人数上限（默认 6 人）</span><br><span class="line">  → 填写费用（每人多少钱，免费可选）</span><br><span class="line">  → 填写备注（比如&quot;新手友好&quot;、&quot;需要自带篮球&quot;）</span><br><span class="line">  → 点击&quot;发布&quot;</span><br><span class="line">    → 组局立即出现在附近列表中</span><br><span class="line">    → 报名者陆续进群</span><br><span class="line">    → 活动前 1 小时自动推送提醒</span><br></pre></td></tr></table></figure>
+
+<p>组织一个组局，不超过 30 秒。</p>
+<h3 id="流程三：活动结束后"><a href="#流程三：活动结束后" class="headerlink" title="流程三：活动结束后"></a>流程三：活动结束后</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">组织者点击&quot;签到&quot;</span><br><span class="line">  → 弹出&quot;填写本次活动信息&quot;</span><br><span class="line">    → 实际参与人数</span><br><span class="line">    → 评分</span><br><span class="line">    → 可选：上传一张照片</span><br><span class="line">  → 完成后向所有报名者推送&quot;已完成&quot;通知</span><br><span class="line">  → 1 小时后，双方可互相评价</span><br></pre></td></tr></table></figure>
+
+<p>签到是强制的——组织者不点签到，报名者不会收到评价请求。这保证了双方都有动力完成闭环。</p>
+<h2 id="四、关键界面描述"><a href="#四、关键界面描述" class="headerlink" title="四、关键界面描述"></a>四、关键界面描述</h2><h3 id="首页（组局列表）"><a href="#首页（组局列表）" class="headerlink" title="首页（组局列表）"></a>首页（组局列表）</h3><p>顶部：一个搜索栏，支持按场地名、运动类型搜索。</p>
+<p>下方：卡片列表，每张卡片包含：</p>
+<ul>
+<li>运动图标（篮球&#x2F;足球&#x2F;钓鱼…）</li>
+<li>标题（”下午篮球约”）</li>
+<li>时间（”今天 15:00-17:00”）</li>
+<li>地点（”浦东新区·东方体育中心”）</li>
+<li>人数（”3&#x2F;6人”，带进度条）</li>
+<li>费用（”50元&#x2F;人”或”免费”）</li>
+<li>组织者头像 + 昵称 + 信用分</li>
+<li>底部按钮”报名”</li>
+</ul>
+<p>顶部标签栏：全部 &#x2F; 篮球 &#x2F; 足球 &#x2F; 钓鱼 &#x2F; 跑步 &#x2F; 羽毛球 &#x2F; 骑行 &#x2F; 其他。</p>
+<h3 id="组局详情页"><a href="#组局详情页" class="headerlink" title="组局详情页"></a>组局详情页</h3><p>顶部：运动图标 + 标题 + 组织者信息</p>
+<p>中间：</p>
+<ul>
+<li>时间块（开始、结束时间）</li>
+<li>地点块（地图缩略图 + 地址 + 导航按钮）</li>
+<li>费用说明</li>
+<li>人数进度（”3&#x2F;6人已报名，2人已去”）</li>
+<li>组织者备注（自由文字）</li>
+<li>已报名者列表（头像 + 昵称）</li>
+<li>组织者历史活动记录（最近 3 次活动的参与人数和评价）</li>
+</ul>
+<p>底部：大按钮”报名”</p>
+<h3 id="个人主页"><a href="#个人主页" class="headerlink" title="个人主页"></a>个人主页</h3><p>顶部：头像 + 昵称 + 信用分 + 所在地</p>
+<p>中间：</p>
+<ul>
+<li>运动偏好标签（篮球、钓鱼、跑步）</li>
+<li>数据（累计参与活动数、组织活动数、签到率）</li>
+<li>最近参与的活动列表</li>
+<li>最近组织的活动列表</li>
+<li>装备展示（可选，自己上传的运动装备照片）</li>
+</ul>
+<p>底部：</p>
+<ul>
+<li>“发起组局”按钮（如果用户有资格组织）</li>
+<li>“修改资料”按钮</li>
+</ul>
+<h2 id="五、核心数据模型"><a href="#五、核心数据模型" class="headerlink" title="五、核心数据模型"></a>五、核心数据模型</h2><h3 id="用户表"><a href="#用户表" class="headerlink" title="用户表"></a>用户表</h3><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>id</td>
+<td>UUID</td>
+<td>主键</td>
+</tr>
+<tr>
+<td>phone</td>
+<td>string</td>
+<td>手机号，唯一</td>
+</tr>
+<tr>
+<td>nickname</td>
+<td>string</td>
+<td>昵称</td>
+</tr>
+<tr>
+<td>avatar</td>
+<td>string</td>
+<td>头像 URL</td>
+</tr>
+<tr>
+<td>location</td>
+<td>geo</td>
+<td>经纬度</td>
+</tr>
+<tr>
+<td>id_verified</td>
+<td>bool</td>
+<td>是否实名认证</td>
+</tr>
+<tr>
+<td>created_at</td>
+<td>datetime</td>
+<td>注册时间</td>
+</tr>
+</tbody></table>
+<h3 id="组局表"><a href="#组局表" class="headerlink" title="组局表"></a>组局表</h3><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>id</td>
+<td>UUID</td>
+<td>主键</td>
+</tr>
+<tr>
+<td>organizer_id</td>
+<td>UUID</td>
+<td>组织者</td>
+</tr>
+<tr>
+<td>sport_type</td>
+<td>enum</td>
+<td>篮球&#x2F;足球&#x2F;钓鱼…</td>
+</tr>
+<tr>
+<td>title</td>
+<td>string</td>
+<td>标题</td>
+</tr>
+<tr>
+<td>description</td>
+<td>text</td>
+<td>备注</td>
+</tr>
+<tr>
+<td>start_time</td>
+<td>datetime</td>
+<td>开始时间</td>
+</tr>
+<tr>
+<td>end_time</td>
+<td>datetime</td>
+<td>结束时间</td>
+</tr>
+<tr>
+<td>location</td>
+<td>geo</td>
+<td>地点</td>
+</tr>
+<tr>
+<td>venue_name</td>
+<td>string</td>
+<td>场地名称</td>
+</tr>
+<tr>
+<td>capacity</td>
+<td>int</td>
+<td>人数上限</td>
+</tr>
+<tr>
+<td>fee</td>
+<td>decimal</td>
+<td>费用</td>
+</tr>
+<tr>
+<td>status</td>
+<td>enum</td>
+<td>报名中&#x2F;进行中&#x2F;已结束&#x2F;已取消</td>
+</tr>
+<tr>
+<td>created_at</td>
+<td>datetime</td>
+<td>创建时间</td>
+</tr>
+</tbody></table>
+<h3 id="报名表"><a href="#报名表" class="headerlink" title="报名表"></a>报名表</h3><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>id</td>
+<td>UUID</td>
+<td>主键</td>
+</tr>
+<tr>
+<td>activity_id</td>
+<td>UUID</td>
+<td>组局</td>
+</tr>
+<tr>
+<td>user_id</td>
+<td>UUID</td>
+<td>用户</td>
+</tr>
+<tr>
+<td>status</td>
+<td>enum</td>
+<td>已报名&#x2F;已签到&#x2F;已取消&#x2F;缺席</td>
+</tr>
+<tr>
+<td>checkin_at</td>
+<td>datetime</td>
+<td>签到时间</td>
+</tr>
+<tr>
+<td>created_at</td>
+<td>datetime</td>
+<td>报名时间</td>
+</tr>
+</tbody></table>
+<h3 id="评价表"><a href="#评价表" class="headerlink" title="评价表"></a>评价表</h3><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>id</td>
+<td>UUID</td>
+<td>主键</td>
+</tr>
+<tr>
+<td>activity_id</td>
+<td>UUID</td>
+<td>组局</td>
+</tr>
+<tr>
+<td>from_user_id</td>
+<td>UUID</td>
+<td>评价者</td>
+</tr>
+<tr>
+<td>to_user_id</td>
+<td>UUID</td>
+<td>被评价者</td>
+</tr>
+<tr>
+<td>rating</td>
+<td>int</td>
+<td>1-5 星</td>
+</tr>
+<tr>
+<td>comment</td>
+<td>text</td>
+<td>评价内容</td>
+</tr>
+<tr>
+<td>created_at</td>
+<td>datetime</td>
+<td>评价时间</td>
+</tr>
+</tbody></table>
+<p>这个数据模型足够支撑 MVP 的全部功能。</p>
+<h2 id="六、几个容易忽视的细节"><a href="#六、几个容易忽视的细节" class="headerlink" title="六、几个容易忽视的细节"></a>六、几个容易忽视的细节</h2><p><strong>细节一：报名者的”后悔权”</strong></p>
+<p>报名了但临时有事怎么办？</p>
+<ul>
+<li>活动开始前 2 小时：允许自由取消，不扣分</li>
+<li>活动开始前 30 分钟：允许取消，扣信用分</li>
+<li>活动开始后：不允许取消，缺席记录留痕</li>
+</ul>
+<p>规则必须明确，且报名时就要提示。</p>
+<p><strong>细节二：组织者取消&#x2F;延期</strong></p>
+<p>组织者临时有事，活动怎么办？</p>
+<ul>
+<li>允许延期一次（时间向后推）</li>
+<li>报名者收到通知后可以退出或继续参与</li>
+<li>如果活动最终取消，所有报名者自动收到通知，组织者的信用分扣分</li>
+</ul>
+<p><strong>细节三：群聊在哪里</strong></p>
+<p>组局之后怎么沟通？</p>
+<p>建议：报名成功后，App 自动建一个微信小程序群（或 App 内置群），组织者将参与者拉进去。</p>
+<p>不自己搭一套 IM 系统——那是巨大的工作量，而且是 MVP 不需要的。用微信&#x2F;企微&#x2F;群组就够了。</p>
+<p><strong>细节四：费用怎么收</strong></p>
+<p>组织者先收钱还是活动后结算？</p>
+<p>建议：<strong>组织者垫付，报名者到场地支付</strong>。或者活动前通过微信转账。App 不做支付，不碰钱。</p>
+<p>碰钱就意味着你要做支付合规、资金管理、财务系统——这些不是 MVP 该做的事。</p>
+<p><strong>细节五：信用分的初始值</strong></p>
+<p>新用户信用分给多少？</p>
+<p>建议：<strong>100 分</strong>。不是 0 分。</p>
+<p>0 分会让新用户觉得”我什么都没做就被降分了”。100 分给用户一个正向起点，然后通过行为（签到率、评价）来调节。</p>
+<p><strong>细节六：地理位置怎么展示</strong></p>
+<p>不要精确到”经纬度”。</p>
+<p>对外展示时只显示到”区域”级别（比如”浦东新区”），只有报名后才显示精确位置。保护组织者安全。</p>
+<h2 id="七、上线清单"><a href="#七、上线清单" class="headerlink" title="七、上线清单"></a>七、上线清单</h2><p>上线前必须准备好的事：</p>
+<ul>
+<li><input disabled="" type="checkbox"> 10 个种子用户，已经通过线下认识</li>
+<li><input disabled="" type="checkbox"> 5 个真实组局，数据录入系统</li>
+<li><input disabled="" type="checkbox"> 1 个运营人员（你自己），负责初期用户管理</li>
+<li><input disabled="" type="checkbox"> 一份《社区公约》，明确哪些行为会被封号</li>
+<li><input disabled="" type="checkbox"> 一份《安全须知》，活动前推送给用户</li>
+<li><input disabled="" type="checkbox"> 一个客服通道（微信群），处理投诉和异常</li>
+<li><input disabled="" type="checkbox"> 服务器就绪，域名备案完成</li>
+</ul>
+<p>MVP 不需要融资，不需要团队，不需要广告。你需要的是 5 个真实组局的数据，和 10 个真实用户的好评。</p>
+<p>有了这些，你才有资格说”这个产品成立了”。</p>
+<h2 id="八、上线后的第一个月"><a href="#八、上线后的第一个月" class="headerlink" title="八、上线后的第一个月"></a>八、上线后的第一个月</h2><p>上线后第一个月的核心指标不是”用户数”，而是：</p>
+<ol>
+<li><p><strong>组局完成率</strong>：发起 100 个组局，完成（有签到）多少个？<br>目标：60% 以上。低于 60% 说明组局不成立。</p>
+</li>
+<li><p><strong>复购率</strong>：参与过一次的用户，一个月内有参与第二次吗？<br>目标：30% 以上。低于 30% 说明用户觉得”没什么意思”。</p>
+</li>
+<li><p><strong>口碑推荐</strong>：每个老用户推荐了几个新用户？<br>目标：1.5 以上。低于 1.5 说明产品不值得推荐。</p>
+</li>
+</ol>
+<p>这三个指标通过了，再考虑”怎么做推广”。</p>
+<p>这三个指标没通过，继续打磨产品，不要急着烧钱获客。</p>
+
+  </div>
+  
+  
+    <div class="tags">
+      标签: 
+      
+        <a href="/blogs/tags/%E5%88%9B%E4%B8%9A/">#创业</a>
+      
+        <a href="/blogs/tags/%E4%BA%A7%E5%93%81%E8%AE%BE%E8%AE%A1/">#产品设计</a>
+      
+        <a href="/blogs/tags/MVP/">#MVP</a>
+      
+        <a href="/blogs/tags/%E4%BA%A7%E5%93%81%E5%8E%9F%E5%9E%8B/">#产品原型</a>
+      
+        <a href="/blogs/tags/%E8%BF%90%E5%8A%A8%E7%A4%BE%E4%BA%A4/">#运动社交</a>
+      
+        <a href="/blogs/tags/%E5%8A%9F%E8%83%BD%E8%AE%BE%E8%AE%A1/">#功能设计</a>
+      
+    </div>
+  
+</article>
+  </main>
+  
+  <footer>
+    <p>© 2025 创业思考博客</p>
+  </footer>
+</body>
+</html>

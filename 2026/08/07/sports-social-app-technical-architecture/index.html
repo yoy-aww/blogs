@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>运动社交 App 技术选型方案 | 创业思考博客</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/blogs/css/style.css">
+<meta name="generator" content="Hexo 8.1.1"></head>
+<body>
+  <header>
+    <h1><a href="/blogs/">创业思考博客</a></h1>
+    <nav>
+      
+        <a href="/blogs/">首页</a>
+      
+        <a href="/blogs/archives">归档</a>
+      
+        <a href="/blogs/about">关于</a>
+      
+    </nav>
+  </header>
+  
+  <main>
+    <article>
+  <h1>运动社交 App 技术选型方案</h1>
+  <time>2026-08-07</time>
+  
+  <div class="content post-content">
+    <p>上一篇把功能拆清楚了。这一篇说技术——用什么堆出来，怎么部署，成本多少。</p>
+<p>如果你不是开发者，可以跳着看，重点看”为什么这么选”和”要花多少钱”。</p>
+<h2 id="一、整体技术栈决策"><a href="#一、整体技术栈决策" class="headerlink" title="一、整体技术栈决策"></a>一、整体技术栈决策</h2><p>这个产品不是高并发、高实时性产品。它的特征：</p>
+<ul>
+<li><strong>用户量级</strong>：MVP 阶段 1000-5000 活跃用户</li>
+<li><strong>并发特征</strong>：组局时间集中在下午&#x2F;晚上&#x2F;周末，非 7×24 小时</li>
+<li><strong>实时需求</strong>：低（通知用推送，不需要 WebSocket 级别实时）</li>
+<li><strong>图片&#x2F;视频</strong>：有（活动照片、头像），但不是核心流量</li>
+<li><strong>地理位置</strong>：有，但不需要高频更新</li>
+</ul>
+<p>基于这些特征，技术选型的优先原则是：<strong>简单 &gt; 先进</strong>，<strong>省钱 &gt; 炫酷</strong>，<strong>好维护 &gt; 高性能</strong>。</p>
+<p>最终选型如下：</p>
+<table>
+<thead>
+<tr>
+<th>层级</th>
+<th>选型</th>
+<th>理由</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>前端</td>
+<td>React Native（Expo）</td>
+<td>跨平台一套代码，个人开发友好</td>
+</tr>
+<tr>
+<td>后端</td>
+<td>Node.js + Express + Prisma</td>
+<td>全栈 JS，你一个人写起来不累</td>
+</tr>
+<tr>
+<td>数据库</td>
+<td>PostgreSQL</td>
+<td>关系型，支持地理查询（PostGIS）</td>
+</tr>
+<tr>
+<td>缓存</td>
+<td>Redis</td>
+<td>缓存组局列表、用户信息</td>
+</tr>
+<tr>
+<td>对象存储</td>
+<td>阿里云 OSS &#x2F; 腾讯云 COS</td>
+<td>存头像、活动照片</td>
+</tr>
+<tr>
+<td>推送</td>
+<td>微信消息推送 + 短信</td>
+<td>App 推送需要推送服务</td>
+</tr>
+<tr>
+<td>部署</td>
+<td>阿里云 ECS + Nginx</td>
+<td>便宜，够用</td>
+</tr>
+<tr>
+<td>地图</td>
+<td>腾讯位置服务</td>
+<td>国内最准的地图 API</td>
+</tr>
+<tr>
+<td>支付</td>
+<td>微信 Native 支付</td>
+<td>不碰，MVP 阶段不碰支付</td>
+</tr>
+</tbody></table>
+<h2 id="二、前端方案详解"><a href="#二、前端方案详解" class="headerlink" title="二、前端方案详解"></a>二、前端方案详解</h2><h3 id="为什么是-React-Native-Expo"><a href="#为什么是-React-Native-Expo" class="headerlink" title="为什么是 React Native + Expo"></a>为什么是 React Native + Expo</h3><p>三个原因：</p>
+<p><strong>原因一：一套代码两个平台</strong></p>
+<p>你一个人开发，不可能同时维护 iOS 和 Android 两个代码库。React Native 写一套，两端都能跑。</p>
+<p><strong>原因二：Expo 降低开发门槛</strong></p>
+<p>Expo 是 React Native 的”零配置方案”。不需要配 Xcode，不需要配 Android Studio 签名证书。你写完代码，Expo 帮你打包、发 TestFlight、发 Google Play。</p>
+<p>个人开发者如果没有 Mac 电脑，Expo 甚至可以通过 Web 端预览效果。</p>
+<p><strong>原因三：开发效率高</strong></p>
+<p>热更新（Hot Reloading）让你改了代码不用重新编译，马上在手机上看到效果。这对于快速迭代 MVP 至关重要。</p>
+<h3 id="Expo-的局限性"><a href="#Expo-的局限性" class="headerlink" title="Expo 的局限性"></a>Expo 的局限性</h3><p>也要说清楚 Expo 的缺点：</p>
+<ul>
+<li>一些系统级 API（比如 NFC、蓝牙）在 Expo 中可能受限</li>
+<li>包体积比原生大</li>
+<li>某些性能敏感场景（比如 60fps 长列表）可能需要 Native Modules</li>
+</ul>
+<p>但这个产品的核心功能是”列表浏览 + 表单填写 + 地图展示”，没有性能敏感的场景。Expo 完全够用。</p>
+<h3 id="前端架构"><a href="#前端架构" class="headerlink" title="前端架构"></a>前端架构</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">src/</span><br><span class="line">├── screens/             # 页面</span><br><span class="line">│   ├── HomeScreen.js    # 组局列表</span><br><span class="line">│   ├── ActivityDetailScreen.js  # 组局详情</span><br><span class="line">│   ├── CreateActivityScreen.js  # 发起组局</span><br><span class="line">│   ├── ProfileScreen.js # 个人主页</span><br><span class="line">│   ├── ActivityListScreen.js    # 我的活动</span><br><span class="line">│   └── EditProfileScreen.js     # 编辑资料</span><br><span class="line">├── components/          # 组件</span><br><span class="line">│   ├── ActivityCard.js  # 组局卡片</span><br><span class="line">│   ├── SportBadge.js    # 运动标签</span><br><span class="line">│   ├── MapView.js       # 地图组件</span><br><span class="line">│   └── RatingStars.js   # 评分组件</span><br><span class="line">├── services/            # API 调用</span><br><span class="line">│   └── api.js</span><br><span class="line">├── navigation/          # 路由</span><br><span class="line">└── utils/               # 工具函数</span><br></pre></td></tr></table></figure>
+
+<p>关键库：</p>
+<table>
+<thead>
+<tr>
+<th>库</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>@react-navigation&#x2F;native</td>
+<td>路由导航</td>
+</tr>
+<tr>
+<td>expo-location</td>
+<td>地理位置</td>
+</tr>
+<tr>
+<td>expo-image-picker</td>
+<td>头像&#x2F;照片上传</td>
+</tr>
+<tr>
+<td>expo-contacts</td>
+<td>读取通讯录（选）</td>
+</tr>
+<tr>
+<td>react-native-maps</td>
+<td>地图展示</td>
+</tr>
+<tr>
+<td>react-native-paper</td>
+<td>UI 组件库</td>
+</tr>
+<tr>
+<td>dayjs</td>
+<td>时间处理</td>
+</tr>
+<tr>
+<td>zustand</td>
+<td>状态管理（比 Redux 简单）</td>
+</tr>
+</tbody></table>
+<h2 id="三、后端方案详解"><a href="#三、后端方案详解" class="headerlink" title="三、后端方案详解"></a>三、后端方案详解</h2><h3 id="为什么是-Node-js-Express-Prisma"><a href="#为什么是-Node-js-Express-Prisma" class="headerlink" title="为什么是 Node.js + Express + Prisma"></a>为什么是 Node.js + Express + Prisma</h3><p><strong>Node.js</strong>：前后端都用 JavaScript，不用切换语言。一个人做全栈最舒服。</p>
+<p><strong>Express</strong>：轻量，学习曲线短，MVP 够用。不上 Next.js&#x2F;Nest.js，因为那些框架的复杂度对 MVP 是浪费。</p>
+<p><strong>Prisma</strong>：TypeScript ORM，自动做类型推导。写 SQL 是痛苦的，写 Prisma 是愉快的。</p>
+<h3 id="后端架构"><a href="#后端架构" class="headerlink" title="后端架构"></a>后端架构</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">server/</span><br><span class="line">├── src/</span><br><span class="line">│   ├── routes/          # 路由</span><br><span class="line">│   │   ├── activities.js</span><br><span class="line">│   │   ├── users.js</span><br><span class="line">│   │   ├── apply.js</span><br><span class="line">│   │   └── reviews.js</span><br><span class="line">│   ├── controllers/     # 业务逻辑</span><br><span class="line">│   ├── services/        # 服务层</span><br><span class="line">│   ├── middleware/      # 中间件</span><br><span class="line">│   │   ├── auth.js      # 登录验证</span><br><span class="line">│   │   └── validate.js  # 参数校验</span><br><span class="line">│   ├── prisma/          # 数据库模型</span><br><span class="line">│   │   └── schema.prisma</span><br><span class="line">│   └── index.js         # 入口</span><br><span class="line">├── .env                 # 环境变量</span><br><span class="line">└── package.json</span><br></pre></td></tr></table></figure>
+
+<h3 id="核心-API-设计"><a href="#核心-API-设计" class="headerlink" title="核心 API 设计"></a>核心 API 设计</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">POST   /api/auth/login          # 短信验证码登录</span><br><span class="line">POST   /api/auth/verify         # 验证验证码</span><br><span class="line">GET    /api/me                  # 获取当前用户信息</span><br><span class="line">PUT    /api/me                  # 更新个人信息</span><br><span class="line">POST   /api/me/verify-id        # 提交身份证认证</span><br><span class="line"></span><br><span class="line">GET    /api/activities          # 获取附近组局列表</span><br><span class="line">POST   /api/activities          # 创建组局</span><br><span class="line">GET    /api/activities/:id      # 组局详情</span><br><span class="line">PUT    /api/activities/:id      # 更新组局</span><br><span class="line">DELETE /api/activities/:id      # 取消组局</span><br><span class="line">POST   /api/activities/:id/checkin  # 组织者签到</span><br><span class="line"></span><br><span class="line">POST   /api/activities/:id/apply    # 报名</span><br><span class="line">DELETE /api/activities/:id/apply    # 取消报名</span><br><span class="line">GET    /api/me/activities           # 我的活动</span><br><span class="line"></span><br><span class="line">POST   /api/activities/:id/reviews  # 提交评价</span><br><span class="line">GET    /api/users/:id/reviews       # 用户评价列表</span><br><span class="line"></span><br><span class="line">GET    /api/venues                  # 场地列表</span><br><span class="line">GET    /api/venues/nearby           # 附近场地</span><br></pre></td></tr></table></figure>
+
+<p>所有 API 返回统一格式：</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span></span><br><span class="line">  <span class="attr">&quot;code&quot;</span><span class="punctuation">:</span> <span class="number">200</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;data&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span> ... <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;message&quot;</span><span class="punctuation">:</span> <span class="string">&quot;success&quot;</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p>失败返回：</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span></span><br><span class="line">  <span class="attr">&quot;code&quot;</span><span class="punctuation">:</span> <span class="number">400</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;data&quot;</span><span class="punctuation">:</span> <span class="literal"><span class="keyword">null</span></span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;message&quot;</span><span class="punctuation">:</span> <span class="string">&quot;参数错误&quot;</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="Prisma-Schema（关键部分）"><a href="#Prisma-Schema（关键部分）" class="headerlink" title="Prisma Schema（关键部分）"></a>Prisma Schema（关键部分）</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br></pre></td><td class="code"><pre><span class="line">model User &#123;</span><br><span class="line">  id            String   @id @default(uuid())</span><br><span class="line">  phone         String   @unique</span><br><span class="line">  nickname      String</span><br><span class="line">  avatar        String?</span><br><span class="line">  latitude      Float?</span><br><span class="line">  longitude     Float?</span><br><span class="line">  idVerified    Boolean  @default(false)</span><br><span class="line">  creditScore   Int      @default(100)</span><br><span class="line">  sportTypes    String[] // [&quot;basketball&quot;,&quot;fishing&quot;,&quot;running&quot;]</span><br><span class="line">  createdAt     DateTime @default(now())</span><br><span class="line"></span><br><span class="line">  activities    Activity[] @relation(&quot;OrganizerActivities&quot;)</span><br><span class="line">  applies       Apply[]</span><br><span class="line">  reviewsFrom   Review[]</span><br><span class="line">  reviewsTo     Review[]</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">model Activity &#123;</span><br><span class="line">  id            String   @id @default(uuid())</span><br><span class="line">  organizerId   String</span><br><span class="line">  organizer     User     @relation(&quot;OrganizerActivities&quot;, fields: [organizerId], references: [id])</span><br><span class="line">  sportType     String</span><br><span class="line">  title         String</span><br><span class="line">  description   String?</span><br><span class="line">  startTime     DateTime</span><br><span class="line">  endTime       DateTime</span><br><span class="line">  venueName     String</span><br><span class="line">  venueLatitude Float</span><br><span class="line">  venueLongitude Float</span><br><span class="line">  capacity      Int</span><br><span class="line">  fee           Decimal</span><br><span class="line">  feeUnit       String   // &quot;per_person&quot; / &quot;free&quot;</span><br><span class="line">  status        String   // &quot;open&quot; / &quot;ongoing&quot; / &quot;completed&quot; / &quot;canceled&quot;</span><br><span class="line">  createdAt     DateTime @default(now())</span><br><span class="line"></span><br><span class="line">  applies       Apply[]</span><br><span class="line">  reviews       Review[]</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">model Apply &#123;</span><br><span class="line">  id          String   @id @default(uuid())</span><br><span class="line">  activityId  String</span><br><span class="line">  activity    Activity @relation(fields: [activityId], references: [id])</span><br><span class="line">  userId      String</span><br><span class="line">  user        User     @relation(fields: [userId], references: [id])</span><br><span class="line">  status      String   // &quot;applied&quot; / &quot;checked_in&quot; / &quot;canceled&quot; / &quot;absent&quot;</span><br><span class="line">  checkinAt   DateTime?</span><br><span class="line">  createdAt   DateTime @default(now())</span><br><span class="line"></span><br><span class="line">  @@unique([activityId, userId])</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">model Review &#123;</span><br><span class="line">  id           String   @id @default(uuid())</span><br><span class="line">  activityId   String</span><br><span class="line">  activity     Activity @relation(fields: [activityId], references: [id])</span><br><span class="line">  fromUserId   String</span><br><span class="line">  fromUser     User     @relation(fields: [fromUserId], references: [id])</span><br><span class="line">  toUserId     String</span><br><span class="line">  toUser       User     @relation(fields: [toUserId], references: [id])</span><br><span class="line">  rating       Int      // 1-5</span><br><span class="line">  comment      String?</span><br><span class="line">  createdAt    DateTime @default(now())</span><br><span class="line"></span><br><span class="line">  @@unique([activityId, fromUserId, toUserId])</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="四、地理查询的实现"><a href="#四、地理查询的实现" class="headerlink" title="四、地理查询的实现"></a>四、地理查询的实现</h2><p>这是这个产品最特殊的部分——“找附近的组局”。</p>
+<h3 id="用-PostGIS-做地理查询"><a href="#用-PostGIS-做地理查询" class="headerlink" title="用 PostGIS 做地理查询"></a>用 PostGIS 做地理查询</h3><p>PostgreSQL 的 PostGIS 扩展天然支持地理查询，不需要自己写复杂的地理算法。</p>
+<p>示例查询——“找上海市的篮球组局”：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> activities</span><br><span class="line"><span class="keyword">WHERE</span> sport_type <span class="operator">=</span> <span class="string">&#x27;basketball&#x27;</span></span><br><span class="line">  <span class="keyword">AND</span> status <span class="operator">=</span> <span class="string">&#x27;open&#x27;</span></span><br><span class="line">  <span class="keyword">AND</span> start_time <span class="operator">&gt;=</span> NOW()</span><br><span class="line">  <span class="keyword">AND</span> EarthDistance(</span><br><span class="line">      LLToGeo(<span class="number">31.2304</span>, <span class="number">121.4737</span>),  <span class="comment">-- 用户位置</span></span><br><span class="line">      LLToGeo(venue_latitude, venue_longitude)</span><br><span class="line">    ) <span class="operator">&lt;</span> <span class="number">10000</span>  <span class="comment">-- 10 公里内</span></span><br><span class="line"><span class="keyword">ORDER</span> <span class="keyword">BY</span> EarthDistance(</span><br><span class="line">    LLToGeo(<span class="number">31.2304</span>, <span class="number">121.4737</span>),</span><br><span class="line">    LLToGeo(venue_latitude, venue_longitude)</span><br><span class="line">  ) <span class="keyword">ASC</span></span><br><span class="line">LIMIT <span class="number">20</span>;</span><br></pre></td></tr></table></figure>
+
+<p>Prisma 中也可以用 <code>prisma-geo</code> 或 <code>prisma-geo-driver</code> 来做地理查询。</p>
+<h3 id="索引优化"><a href="#索引优化" class="headerlink" title="索引优化"></a>索引优化</h3><p> venue_latitude, venue_longitude 需要建 GIST 索引：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> INDEX idx_activity_location <span class="keyword">ON</span> activities</span><br><span class="line"><span class="keyword">USING</span> GIST (LLToGeo(venue_latitude, venue_longitude));</span><br></pre></td></tr></table></figure>
+
+<p>这个索引让地理查询在毫秒级别完成，而不是秒级。</p>
+<h2 id="五、地图选哪个"><a href="#五、地图选哪个" class="headerlink" title="五、地图选哪个"></a>五、地图选哪个</h2><p><strong>推荐腾讯位置服务。</strong></p>
+<p>理由：</p>
+<ul>
+<li>国内定位最准（百度其次，高德再次）</li>
+<li>免费额度充足（日限 50 万次调用）</li>
+<li>有现成的 React Native SDK：<code>tencent-react-native-map</code></li>
+<li>支持逆地理编码（经纬度 → 地址名）</li>
+</ul>
+<p>百度和高德也可以，但腾讯的 React Native 支持更完善。</p>
+<h2 id="六、部署方案"><a href="#六、部署方案" class="headerlink" title="六、部署方案"></a>六、部署方案</h2><h3 id="服务器"><a href="#服务器" class="headerlink" title="服务器"></a>服务器</h3><p>推荐阿里云 ECS t6 实例（2 核 2G），约 50 元&#x2F;月。</p>
+<p>配置：</p>
+<ul>
+<li>操作系统：Ubuntu 22.04 LTS</li>
+<li>Web 服务：Nginx</li>
+<li>反向代理 + 静态文件托管</li>
+</ul>
+<h3 id="数据库"><a href="#数据库" class="headerlink" title="数据库"></a>数据库</h3><p>MVP 阶段用同一台服务器的 PostgreSQL，不用单独买数据库服务。</p>
+<p>PostgreSQL 的安装和启动：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">sudo</span> apt update</span><br><span class="line"><span class="built_in">sudo</span> apt install postgresql postgresql-contrib</span><br><span class="line"><span class="built_in">sudo</span> apt install postgis  <span class="comment"># 地理查询扩展</span></span><br><span class="line"><span class="built_in">sudo</span> systemctl start postgresql</span><br><span class="line"><span class="built_in">sudo</span> -u postgres psql -c <span class="string">&quot;CREATE DATABASE sports_social;&quot;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="前端"><a href="#前端" class="headerlink" title="前端"></a>前端</h3><p>Expo 构建后，可以生成：</p>
+<ul>
+<li>Android：生成 APK，用户直接下载安装</li>
+<li>iOS：通过 TestFlight 分发（需要 Apple Developer 账号，年费 $99）</li>
+<li>网页版：Expo Web，直接部署在 Nginx 上</li>
+</ul>
+<p>MVP 阶段优先做 Android，因为国内 Android 用户占比高，且上架 Google Play 不需要审核。</p>
+<h3 id="部署流程"><a href="#部署流程" class="headerlink" title="部署流程"></a>部署流程</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 1. 拉取代码</span></span><br><span class="line"><span class="built_in">cd</span> /home/app/sports-social</span><br><span class="line">git pull</span><br><span class="line"></span><br><span class="line"><span class="comment"># 2. 重启后端</span></span><br><span class="line">pm2 restart sports-social-backend</span><br><span class="line"></span><br><span class="line"><span class="comment"># 3. 重启 Nginx</span></span><br><span class="line"><span class="built_in">sudo</span> nginx -s reload</span><br><span class="line"></span><br><span class="line"><span class="comment"># 4. 数据库迁移（如有 Schema 变更）</span></span><br><span class="line"><span class="built_in">cd</span> server &amp;&amp; npx prisma migrate dev</span><br></pre></td></tr></table></figure>
+
+<p>如果不想用 PM2，用 systemd 也可以，更轻量。</p>
+<h2 id="七、不需要做的事"><a href="#七、不需要做的事" class="headerlink" title="七、不需要做的事"></a>七、不需要做的事</h2><p>以下这些技术是 MVP 阶段<strong>绝对不要做</strong>的：</p>
+<ul>
+<li><strong>不要自建 IM</strong>：用微信小程序群&#x2F;企业微信就够了。自建即时通讯是 100 万以上的坑</li>
+<li><strong>不要做支付系统</strong>：费用通过微信转账结算。支付需要合规，别碰</li>
+<li><strong>不要做推荐算法</strong>：10 个组局不需要算法。按时间和距离排序就够了</li>
+<li><strong>不要做实时 WebSocket</strong>：推送用短信 + 微信消息就够了</li>
+<li><strong>不要上微服务</strong>：一个单体 Express 应用跑 10 年也没问题</li>
+<li><strong>不要做 AI</strong>：你的产品不需要 AI 来加分</li>
+<li><strong>不要做 PWA</strong>：做 Android App 就够了</li>
+</ul>
+<p>这些看起来是”技术亮点”，但对 MVP 阶段来说，每一个都是纯成本。</p>
+<h2 id="八、总成本"><a href="#八、总成本" class="headerlink" title="八、总成本"></a>八、总成本</h2><table>
+<thead>
+<tr>
+<th>项目</th>
+<th>月费</th>
+<th>年费</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>阿里云 ECS t6（2 核 2G）</td>
+<td>50 元</td>
+<td>600 元</td>
+</tr>
+<tr>
+<td>域名</td>
+<td>1 元</td>
+<td>12 元</td>
+</tr>
+<tr>
+<td>数据库（同服务器）</td>
+<td>0 元</td>
+<td>0 元</td>
+</tr>
+<tr>
+<td>对象存储（OSS）</td>
+<td>5 元</td>
+<td>60 元</td>
+</tr>
+<tr>
+<td>短信服务</td>
+<td>按量，约 50 元</td>
+<td>600 元</td>
+</tr>
+<tr>
+<td>腾讯位置服务</td>
+<td>免费</td>
+<td>0 元</td>
+</tr>
+<tr>
+<td>证书（SSL）</td>
+<td>免费（Let’s Encrypt）</td>
+<td>0 元</td>
+</tr>
+<tr>
+<td><strong>合计</strong></td>
+<td><strong>约 56 元&#x2F;月</strong></td>
+<td><strong>约 672 元&#x2F;年</strong></td>
+</tr>
+</tbody></table>
+<p>服务器一年不到 1000 块钱。</p>
+<p>开发成本是唯一的真金白银：时间。</p>
+<h2 id="九、开发周期估算"><a href="#九、开发周期估算" class="headerlink" title="九、开发周期估算"></a>九、开发周期估算</h2><p>如果一个人做：</p>
+<table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>工作量</th>
+<th>时间</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>后端 API</td>
+<td>30 个接口</td>
+<td>2 周</td>
+</tr>
+<tr>
+<td>前端首页 + 列表</td>
+<td>核心页面</td>
+<td>1 周</td>
+</tr>
+<tr>
+<td>前端组局详情 + 发起</td>
+<td>核心页面</td>
+<td>1 周</td>
+</tr>
+<tr>
+<td>前端个人主页</td>
+<td>辅助页面</td>
+<td>3 天</td>
+</tr>
+<tr>
+<td>报名&#x2F;评价流程</td>
+<td>核心流程</td>
+<td>5 天</td>
+</tr>
+<tr>
+<td>地图集成</td>
+<td>地理查询</td>
+<td>3 天</td>
+</tr>
+<tr>
+<td>推送 + 通知</td>
+<td>辅助</td>
+<td>3 天</td>
+</tr>
+<tr>
+<td>联调 + 测试</td>
+<td>全链路</td>
+<td>1 周</td>
+</tr>
+<tr>
+<td>部署 + 上线</td>
+<td>环境配置</td>
+<td>3 天</td>
+</tr>
+<tr>
+<td><strong>合计</strong></td>
+<td><strong>MVP 上线</strong></td>
+<td><strong>约 8 周</strong></td>
+</tr>
+</tbody></table>
+<p>每天写 6-8 小时代码，两个月可以上线一个能用的 MVP。</p>
+<h2 id="十、技术栈的演进路径"><a href="#十、技术栈的演进路径" class="headerlink" title="十、技术栈的演进路径"></a>十、技术栈的演进路径</h2><p>MVP 阶段的技术选型，不需要考虑 100 万用户的事情。但当用户量真的到了那个量级时，需要做的演进如下：</p>
+<table>
+<thead>
+<tr>
+<th>用户量</th>
+<th>需要升级的部分</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1000 活跃</td>
+<td>不需要升级，MVP 方案够用</td>
+</tr>
+<tr>
+<td>1 万活跃</td>
+<td>Redis 缓存组局列表，减少数据库压力</td>
+</tr>
+<tr>
+<td>10 万活跃</td>
+<td>数据库读写分离，增加只读副本</td>
+</tr>
+<tr>
+<td>100 万活跃</td>
+<td>上 CDN，上消息队列，上分库分表</td>
+</tr>
+</tbody></table>
+<p>在 1000 用户之前，不用想这些事。先把产品做出来，让用户用起来。</p>
+<h2 id="十一、一个技术人的忠告"><a href="#十一、一个技术人的忠告" class="headerlink" title="十一、一个技术人的忠告"></a>十一、一个技术人的忠告</h2><p>做 MVP 的时候，最容易犯的错误是：<strong>技术选型时想得太远</strong>。</p>
+<p>“我用 Rust 写后端，性能多好”——但你两周能写完吗？<br>“我用 Flutter，编译快”——但你一个没学过 Flutter 的人能一周上手吗？<br>“我上微服务，可扩展性好”——但微服务运维成本是单体的十倍。</p>
+<p>选择你<strong>现在就会用</strong>的技术，而不是<strong>你觉得最先进</strong>的技术。</p>
+<p>MVP 阶段的核心指标不是”架构有多优雅”，而是”多长时间能上线”。</p>
+<p>技术选型的唯一正确标准是：<strong>它能不能帮你以最少的精力、最快的速度，把一个可用的东西推到用户面前</strong>。</p>
+
+  </div>
+  
+  
+    <div class="tags">
+      标签: 
+      
+        <a href="/blogs/tags/%E6%8A%80%E6%9C%AF%E6%9E%B6%E6%9E%84/">#技术架构</a>
+      
+        <a href="/blogs/tags/%E7%B3%BB%E7%BB%9F%E8%AE%BE%E8%AE%A1/">#系统设计</a>
+      
+        <a href="/blogs/tags/%E5%88%9B%E4%B8%9A/">#创业</a>
+      
+        <a href="/blogs/tags/%E8%BF%90%E5%8A%A8%E7%A4%BE%E4%BA%A4/">#运动社交</a>
+      
+        <a href="/blogs/tags/%E9%80%89%E5%9E%8B/">#选型</a>
+      
+        <a href="/blogs/tags/%E5%BC%80%E5%8F%91/">#开发</a>
+      
+    </div>
+  
+</article>
+  </main>
+  
+  <footer>
+    <p>© 2025 创业思考博客</p>
+  </footer>
+</body>
+</html>
