@@ -3,7 +3,10 @@
     <h2><a href="<%- url_for(post.path) %>"><%= post.title %></a></h2>
     <time><%= date(post.date, 'YYYY-MM-DD') %></time>
     <div class="excerpt">
-      <%- truncate(strip_html(post.content), {length: 200}) %>
+      <%- truncate(
+        strip_html(post.content)
+          .replace(new RegExp('^' + post.title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*'), '')
+      , {length: 200}) %>
     </div>
   </article>
 <% }) %>
