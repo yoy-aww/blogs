@@ -4,8 +4,7 @@
     <time><%= date(post.date, 'YYYY-MM-DD') %></time>
     <div class="excerpt">
       <%- truncate(
-        strip_html(post.content)
-          .replace(new RegExp('^' + post.title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*'), '')
+        strip_html(post.content.replace(/<h1[^>]*>.*?<\/h1>\s*/i, ''))
       , {length: 200}) %>
     </div>
   </article>
