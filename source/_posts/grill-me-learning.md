@@ -1,6 +1,6 @@
 ---
 title: "Grill-Me：让 AI Agent 学会先'拷问'再动手"
-date: 2026-08-11
+date: 2026-08-11 09:00
 tags: [AI, Agent, 编程, 学习]
 description: "Grill-me 是一个正在崛起的 AI Agent 技能范式——在执行任何任务前，Agent 先对用户进行苏格拉底式拷问，逼清意图再动手。本文深入剖析它的机制、生态和真实价值。"
 ---
