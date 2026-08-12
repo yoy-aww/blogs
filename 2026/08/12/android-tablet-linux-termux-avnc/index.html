@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>把安卓平板变成 Linux 电脑：Termux、F-Droid 与 AVNC 的组合实践 | 创业思考博客</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/blogs/css/style.css">
+<meta name="generator" content="Hexo 8.1.1"></head>
+<body>
+  <header>
+    <h1><a href="/blogs/">创业思考博客</a></h1>
+    <nav>
+      
+        <a href="/blogs/">首页</a>
+      
+        <a href="/blogs/archives">归档</a>
+      
+        <a href="/blogs/about">关于</a>
+      
+    </nav>
+  </header>
+  
+  <main>
+    <article>
+  <h1>把安卓平板变成 Linux 电脑：Termux、F-Droid 与 AVNC 的组合实践</h1>
+  <time>2026-08-12</time>
+  
+  <div class="content post-content">
+    <h2 id="一块平板，和它本该有的样子"><a href="#一块平板，和它本该有的样子" class="headerlink" title="一块平板，和它本该有的样子"></a>一块平板，和它本该有的样子</h2><p>我手边有一块安卓平板。它的日常用法很无聊——看视频、刷网页、偶尔写点笔记。但从技术上讲，这块平板里有颗 ARM 处理器、有 8GB 以上内存、有 GPU，性能不比一台入门的 Chromebook 差。它只是被安卓系统”封印”了。</p>
+<p>怎么解封？</p>
+<p>传统方案有两个方向。一是 root 之后刷 Linux 发行版，比如 Ubuntu Touch、PostmarketOS——这条路对绝大多数人来说太折腾，而且会让平板变砖的风险直线上升。二是用 UserLAnd、Linux Deploy 这类应用，它们要么收费，要么需要 root，要么把体验做得像个半成品。</p>
+<p>第三条路是 F-Droid 生态里的一整套免费开源工具组合。它不需要 root，不需要刷机，甚至不需要连接电脑——你在平板上自己就能完成全部操作。</p>
+<p>核心思路其实很简单：Termux 在安卓里跑一个 Linux 发行版，装一个桌面环境和 VNC 服务端，然后用 AVNC 这个 VNC 客户端连上去，就像远程桌面一样在平板上操作 Linux。</p>
+<p>听起来绕了一圈，但绕的每一步都是开源的、可控的、免费的。</p>
+<hr>
+<h2 id="三个角色，各管一段"><a href="#三个角色，各管一段" class="headerlink" title="三个角色，各管一段"></a>三个角色，各管一段</h2><h3 id="Termux：安卓里的终端模拟器"><a href="#Termux：安卓里的终端模拟器" class="headerlink" title="Termux：安卓里的终端模拟器"></a>Termux：安卓里的终端模拟器</h3><p>Termux 不是普通的终端模拟器。它在安卓上跑了一个接近完整 Linux 的用户态环境，有自己的包管理器 <code>pkg</code>，可以安装 Python、Node.js、GCC、Vim 等各种工具。它的 GitHub 仓库有超过 15 万 star，是安卓上事实标准的开发者终端。</p>
+<p>但你装个 Python、跑个脚本，那只是 Termux 基本能力的皮毛。真正让它变得有野心的是 <strong>proot-distro</strong>。</p>
+<p>proot-distro 是一个由 Termux 官方维护的容器管理工具，GitHub 上 3.4k star，170 个版本标签，最近还在活跃更新。它做的事情是：在 Termux 里通过 proot（用户态 root）模拟一个完整的 Linux 发行版——Ubuntu、Debian、Alpine、Arch、Fedora 都能装。你可以在这个”容器”里 <code>apt install</code> 任何东西，包括图形桌面。</p>
+<p>它的原理不是真正的容器（安卓没有 namespace 权限），而是用 proot 通过符号链接把 Android 的根文件系统映射到一个 Linux 发行版的根上，再用 userspace 的 libc 替代内核调用。所以它不是 Docker，也不是 chroot，而是一个巧妙的”假装自己是 Linux”的方案。</p>
+<h3 id="F-Droid：不依赖-Google-的应用商店"><a href="#F-Droid：不依赖-Google-的应用商店" class="headerlink" title="F-Droid：不依赖 Google 的应用商店"></a>F-Droid：不依赖 Google 的应用商店</h3><p>F-Droid 前面刚介绍过——它是一个只分发自由开源软件的应用商店，从源码自己编译 APK，不需要 Google Play Services。Termux 和 AVNC 都上架在 F-Droid 里。</p>
+<p>F-Droid 在这个方案里的角色其实很明确：提供不依赖 Google 生态的 Android 应用分发渠道。如果你用着一台去 G 版平板，或者干脆不想装 Google Play，F-Droid 就是唯一靠谱的获取 Termux 和 AVNC 的途径。</p>
+<p>顺便说一句，官方建议用 F-Droid 而不是 Google Play 装 Termux，因为 Google Play 版本的 Termux 有权限和兼容性限制——它不允许使用 <code>termux-setup-storage</code> 访问外部存储，而 F-Droid 版本没有这个限制。</p>
+<h3 id="AVNC：安卓上的-VNC-客户端"><a href="#AVNC：安卓上的-VNC-客户端" class="headerlink" title="AVNC：安卓上的 VNC 客户端"></a>AVNC：安卓上的 VNC 客户端</h3><p>AVNC 是 F-Droid 生态里一个专门做 VNC 客户端的开源项目，Kotlin 编写，GPLv3 协议。它的特点是：本地渲染、支持 SSL&#x2F;TLS 加密、针对触屏优化。</p>
+<p>在这个方案里，AVNC 扮演的角色是”显示器”。Linux 桌面跑在 Termux 里，它通过 VNC 协议把画面输出到 AVNC 上，你用平板触屏操作 AVNC，AVNC 把操作指令通过 VNC 协议传回 Termux 里的 VNC 服务端。</p>
+<hr>
+<h2 id="整体架构"><a href="#整体架构" class="headerlink" title="整体架构"></a>整体架构</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line">┌─────────────────────────────────────────────┐</span><br><span class="line">│              安卓平板屏幕                     │</span><br><span class="line">│                                             │</span><br><span class="line">│   ┌──────────────┐                          │</span><br><span class="line">│   │   AVNC       │  ← 触屏操作              │</span><br><span class="line">│   │ (VNC 客户端) │                          │</span><br><span class="line">│   └──────┬───────┘                          │</span><br><span class="line">│          │ VNC 协议 (127.0.0.1:5901)        │</span><br><span class="line">│   ┌──────▼───────┐                          │</span><br><span class="line">│   │  TigerVNC    │  ← VNC 服务端            │</span><br><span class="line">│   │  (vncserver) │                          │</span><br><span class="line">│   └──────┬───────┘                          │</span><br><span class="line">│          │                                  │</span><br><span class="line">│   ┌──────▼───────┐                          │</span><br><span class="line">│   │    XFCE4     │  ← Linux 桌面环境         │</span><br><span class="line">│   │  (桌面系统)  │                          │</span><br><span class="line">│   └──────┬───────┘                          │</span><br><span class="line">│          │                                  │</span><br><span class="line">│   ┌──────▼───────┐                          │</span><br><span class="line">│   │   Ubuntu     │  ← proot-distro 容器      │</span><br><span class="line">│   │  (Linux 内核)│                          │</span><br><span class="line">│   └──────┬───────┘                          │</span><br><span class="line">│          │ proot 用户态模拟                  │</span><br><span class="line">│   ┌──────▼───────┐                          │</span><br><span class="line">│   │   Termux     │  ← 安卓终端               │</span><br><span class="line">│   └──────────────┘                          │</span><br><span class="line">└─────────────────────────────────────────────┘</span><br></pre></td></tr></table></figure>
+
+<p>从下往上看：Termux 是底座，proot-distro 在上面跑 Ubuntu，Ubuntu 里装 XFCE 桌面和 TigerVNC，VNC 把画面通过 localhost 传给 AVNC，AVNC 在平板屏幕上渲染出来。</p>
+<p>整个链条里，每一个环节都是开源软件，而且全部可以在 F-Droid 里下载到。</p>
+<hr>
+<h2 id="搭建步骤"><a href="#搭建步骤" class="headerlink" title="搭建步骤"></a>搭建步骤</h2><p>以下命令都是在 Termux 里输入的。假设你已经通过 F-Droid 安装了 Termux 和 AVNC。</p>
+<h3 id="第一步：安装-Linux-发行版"><a href="#第一步：安装-Linux-发行版" class="headerlink" title="第一步：安装 Linux 发行版"></a>第一步：安装 Linux 发行版</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 更新包索引</span></span><br><span class="line">pkg update &amp;&amp; pkg upgrade -y</span><br><span class="line"></span><br><span class="line"><span class="comment"># 安装 proot-distro</span></span><br><span class="line">pkg install proot-distro -y</span><br><span class="line"></span><br><span class="line"><span class="comment"># 安装 Ubuntu（也可以选 debian、arch、fedora）</span></span><br><span class="line">proot-distro install ubuntu</span><br><span class="line"></span><br><span class="line"><span class="comment"># 进入 Ubuntu</span></span><br><span class="line">proot-distro login ubuntu</span><br></pre></td></tr></table></figure>
+
+<p>执行最后一行后，你的提示符会变成 <code>root@ubuntu:~#</code>，说明你已经进入了 Ubuntu 环境。这里你就是一个完整的 root 用户，可以随便 <code>apt install</code>。</p>
+<h3 id="第二步：装桌面-VNC-服务"><a href="#第二步：装桌面-VNC-服务" class="headerlink" title="第二步：装桌面 + VNC 服务"></a>第二步：装桌面 + VNC 服务</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 更新</span></span><br><span class="line">apt update &amp;&amp; apt upgrade -y</span><br><span class="line"></span><br><span class="line"><span class="comment"># 装 XFCE4 桌面（轻量，ARM 设备够用）</span></span><br><span class="line">apt install -y xfce4 xfce4-goodies</span><br><span class="line"></span><br><span class="line"><span class="comment"># 装 VNC 服务端</span></span><br><span class="line">apt install -y tigervnc-standalone-server tigervnc-common</span><br><span class="line"></span><br><span class="line"><span class="comment"># 装常用工具（可选）</span></span><br><span class="line">apt install -y firefox curl wget vim</span><br></pre></td></tr></table></figure>
+
+<h3 id="第三步：配置-VNC"><a href="#第三步：配置-VNC" class="headerlink" title="第三步：配置 VNC"></a>第三步：配置 VNC</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 设置 VNC 连接密码</span></span><br><span class="line">vncpasswd</span><br><span class="line"></span><br><span class="line"><span class="comment"># 编辑启动脚本</span></span><br><span class="line">nano ~/.vnc/xstartup</span><br></pre></td></tr></table></figure>
+
+<p><code>xstartup</code> 的内容替换为：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#!/bin/bash</span></span><br><span class="line">xrdb <span class="variable">$HOME</span>/.Xresources</span><br><span class="line">startxfce4 &amp;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 赋予执行权限</span></span><br><span class="line"><span class="built_in">chmod</span> +x ~/.vnc/xstartup</span><br><span class="line"></span><br><span class="line"><span class="comment"># 启动 VNC 服务，分辨率匹配你的平板</span></span><br><span class="line">vncserver :1 -geometry 1280x800 -depth 24</span><br></pre></td></tr></table></figure>
+
+<p>这里的 <code>1280x800</code> 是个示例——你应该改成自己平板的横屏分辨率。如果分辨率不匹配，桌面显示会拉伸或错位，操作手感会大打折扣。</p>
+<h3 id="第四步：AVNC-连接"><a href="#第四步：AVNC-连接" class="headerlink" title="第四步：AVNC 连接"></a>第四步：AVNC 连接</h3><ol>
+<li>打开 AVNC 应用</li>
+<li>添加新连接：<ul>
+<li>地址填 <code>127.0.0.1</code>（localhost）</li>
+<li>端口填 <code>5901</code></li>
+<li>密码填你刚才设置的 vncpasswd</li>
+</ul>
+</li>
+<li>点连接</li>
+</ol>
+<p>一个完整的 Linux 桌面应该出现在你面前。</p>
+<hr>
+<h2 id="桌面环境选择"><a href="#桌面环境选择" class="headerlink" title="桌面环境选择"></a>桌面环境选择</h2><p>不是所有桌面都适合在 ARM 平板上跑。这里做一个真实的对比。</p>
+<table>
+<thead>
+<tr>
+<th>桌面环境</th>
+<th>内存占用（空载）</th>
+<th>XFCE&#x2F;LXDE 特性</th>
+<th>适合场景</th>
+<th>推荐度</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>XFCE4</td>
+<td>~250MB</td>
+<td>轻量级，模块化，配置灵活</td>
+<td>日常使用、开发</td>
+<td>★★★★☆</td>
+</tr>
+<tr>
+<td>LXDE&#x2F;LXQt</td>
+<td>~180MB</td>
+<td>最轻量，但 UI 较朴素</td>
+<td>低配平板、纯终端辅助</td>
+<td>★★★☆☆</td>
+</tr>
+<tr>
+<td>MATE</td>
+<td>~350MB</td>
+<td>仿 GNOME 2 风格，较成熟</td>
+<td>习惯传统桌面布局的人</td>
+<td>★★★☆☆</td>
+</tr>
+<tr>
+<td>GNOME</td>
+<td>~600MB+</td>
+<td>现代化，但资源占用大</td>
+<td>不推荐</td>
+<td>★★☆☆☆</td>
+</tr>
+<tr>
+<td>KDE Plasma</td>
+<td>~500MB+</td>
+<td>高度可定制，3D 特效多</td>
+<td>不推荐</td>
+<td>★★☆☆☆</td>
+</tr>
+</tbody></table>
+<p>我的建议是 XFCE4。它不是最轻的，但功能完整度、插件生态和 LXDE 比不是一个级别。在 8GB 内存的平板上，XFCE 占 250MB 几乎可以忽略不计。</p>
+<p>如果你的平板内存只有 4GB 甚至更低，那就换 LXDE——把第二步的 <code>xfce4 xfce4-goodies</code> 换成 <code>lxde</code>，<code>xstartup</code> 里改成 <code>startlxde &amp;</code>。</p>
+<hr>
+<h2 id="它能做什么"><a href="#它能做什么" class="headerlink" title="它能做什么"></a>它能做什么</h2><p>跑起来一个 Linux 桌面，到底有什么用？我想到了几个场景。</p>
+<p><strong>写代码。</strong> 在平板上打开 XFCE 终端，装好 Python、Node.js、Git，就能写代码。配合一款 SSH 客户端，你还可以直接连到服务器上写。虽然没有 IDE 那么舒服，但轻量开发场景完全够用。</p>
+<p><strong>远程管理。</strong> 你可以用这台”平板 Linux”做跳板，VNC 连到你自己 VPS 上的桌面环境。你的 VPS 上跑着真正的 GUI 应用——浏览器、Office、甚至 ComfyUI 的 Web UI——而平板只是作为一个远程显示器。这对经常在外跑的人来说，省了一台电脑。</p>
+<p><strong>学习 Linux。</strong> 对想学 Linux 但不想装双系统的人来说，这比虚拟机友好得多。直接在安卓里 <code>apt</code> 装东西、写 Shell 脚本、配置网络——坏了大不了重装 proot-distro，没有任何风险。</p>
+<p><strong>开发调试。</strong> Termux 本身就是一个强大的终端工具，配合 Linux 容器，你可以在平板上跑 Docker 替代品（proot 模拟的容器）、编译程序、跑测试。</p>
+<hr>
+<h2 id="真实的限制"><a href="#真实的限制" class="headerlink" title="真实的限制"></a>真实的限制</h2><p>这个方案听起来很美好，但有些问题你必须清楚。</p>
+<p><strong>没有 GPU 加速。</strong> proot-distro 运行在用户态，安卓的 GPU 驱动对它来说是不可见的。你在 Linux 桌面里跑不了 OpenGL 3D 渲染，没法编译需要 GPU 的程序，也没法在 Linux 里直接跑 ComfyUI。桌面本身没问题，因为 XFCE 用的是软件渲染，但任何依赖硬件加速的操作都会卡死。</p>
+<p><strong>性能有损耗。</strong> proot 的符号链接映射比原生 Linux 多了一层开销。<code>apt install</code> 比真机上慢，编译代码比真机上慢，大型软件启动时间也更长。但日常使用——装软件、跑脚本、写代码——损耗在可接受范围内。</p>
+<p><strong>音频是黑洞。</strong> 在 proot-distro 的 Linux 里配置音频输出到安卓系统，非常麻烦，几乎没有靠谱的现成方案。如果你需要在 Linux 里播放声音，基本只能靠 SSH 隧道转发到外部，或者干脆放弃。</p>
+<p><strong>触屏手势不完美。</strong> AVNC 把桌面映射到触屏上，但 Linux 桌面是为鼠标设计的。双指缩放、滑动切换应用这些手势在 XFCE 里不会原生生效。你需要在 AVNC 设置里调”触摸板模式”来模拟鼠标，习惯之后能接受，但永远比不上原生安卓的流畅。</p>
+<p><strong>没有 Wayland。</strong> VNC 走的是 X11 协议，Wayland 在这个方案里走不通。如果你未来想试试 Waydroid（在 Linux 里跑安卓应用），那就需要在另一个方向上折腾了。</p>
+<p><strong>每次重启要手动启动。</strong> 平板重启后，VNC 进程会死。你需要回到 Termux，重新 <code>proot-distro login ubuntu -- vncserver :1 -geometry 1280x800 -depth 24</code> 才能恢复。写一个 shell 脚本做启动入口可以缓解，但无法实现开机自启（安卓不让你这么做）。</p>
+<hr>
+<h2 id="和其他方案的对比"><a href="#和其他方案的对比" class="headerlink" title="和其他方案的对比"></a>和其他方案的对比</h2><table>
+<thead>
+<tr>
+<th>方案</th>
+<th>需要 root</th>
+<th>收费</th>
+<th>能跑桌面</th>
+<th>GPU 加速</th>
+<th>复杂度</th>
+<th>评价</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Termux + proot-distro + VNC</td>
+<td>否</td>
+<td>否</td>
+<td>是</td>
+<td>否</td>
+<td>中</td>
+<td>本文方案，纯开源，够用</td>
+</tr>
+<tr>
+<td>UserLAnd</td>
+<td>否</td>
+<td>免费+内购</td>
+<td>是</td>
+<td>否</td>
+<td>低</td>
+<td>界面友好，但有广告</td>
+</tr>
+<tr>
+<td>Linux Deploy</td>
+<td>是</td>
+<td>否</td>
+<td>是</td>
+<td>部分</td>
+<td>高</td>
+<td>需要 root，不推荐</td>
+</tr>
+<tr>
+<td>Ubuntu Touch 刷机</td>
+<td>否</td>
+<td>否</td>
+<td>是</td>
+<td>部分</td>
+<td>极高</td>
+<td>有变砖风险，不建议普通人试</td>
+</tr>
+<tr>
+<td>Termux + Waydroid</td>
+<td>否</td>
+<td>否</td>
+<td>否（跑安卓应用）</td>
+<td>部分</td>
+<td>高</td>
+<td>用途不同，不冲突</td>
+</tr>
+<tr>
+<td>云电脑（如 Parsec 云）</td>
+<td>否</td>
+<td>是</td>
+<td>是</td>
+<td>是</td>
+<td>低</td>
+<td>依赖网络和订阅费</td>
+</tr>
+</tbody></table>
+<p>对比之后，Termux + proot-distro + VNC 的优势和劣势都很清晰：它是唯一一个不需要 root、不需要付费、完全开源的方案。代价是慢一点、没有 GPU、音频麻烦。</p>
+<hr>
+<h2 id="参考链接"><a href="#参考链接" class="headerlink" title="参考链接"></a>参考链接</h2><ul>
+<li>Termux GitHub: <a target="_blank" rel="noopener" href="https://github.com/termux/termux-app">https://github.com/termux/termux-app</a></li>
+<li>proot-distro GitHub: <a target="_blank" rel="noopener" href="https://github.com/termux/proot-distro">https://github.com/termux/proot-distro</a></li>
+<li>AVNC GitHub: <a target="_blank" rel="noopener" href="https://github.com/gujjwal00/avnc">https://github.com/gujjwal00/avnc</a></li>
+<li>F-Droid: <a target="_blank" rel="noopener" href="https://f-droid.org/">https://f-droid.org/</a></li>
+<li>TigerVNC: <a target="_blank" rel="noopener" href="https://tigervnc.org/">https://tigervnc.org/</a></li>
+<li>XFCE: <a target="_blank" rel="noopener" href="https://www.xfce.org/">https://www.xfce.org/</a></li>
+</ul>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>这块安卓平板，本来只是一块娱乐设备。但用 Termux、proot-distro、AVNC 和 F-Droid 把它们串起来之后，它变成了一台完整的 Linux 电脑——虽然没有 GPU、没有音频、每次要手动启动，但装软件、写代码、远程管理服务器这些日常开发任务，它都能胜任。</p>
+<p>最重要的是，整个方案不依赖任何付费服务，不需要 root，不需要风险，所有软件都可以从 F-Droid 下载到。这是 F-Droid 生态里少见的、把”自由软件”从口号变成真实可用的东西。</p>
+<p>如果你想让一块闲置的安卓平板有第二个生命，这个方案值得一试。</p>
+
+  </div>
+  
+  
+    <div class="tags">
+      标签: 
+      
+        <a href="/blogs/tags/Linux/">#Linux</a>
+      
+        <a href="/blogs/tags/Android/">#Android</a>
+      
+        <a href="/blogs/tags/Termux/">#Termux</a>
+      
+        <a href="/blogs/tags/%E8%BF%9C%E7%A8%8B%E6%A1%8C%E9%9D%A2/">#远程桌面</a>
+      
+        <a href="/blogs/tags/VNC/">#VNC</a>
+      
+        <a href="/blogs/tags/%E6%8A%98%E8%85%BE/">#折腾</a>
+      
+    </div>
+  
+</article>
+  </main>
+  
+  <footer>
+    <p>© 2025 创业思考博客</p>
+  </footer>
+</body>
+</html>
