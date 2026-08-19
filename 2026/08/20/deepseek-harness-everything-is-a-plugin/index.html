@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>DeepSeek Harness：把智能体框架做成插件化的 K8s | 创业思考博客</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/blogs/css/style.css">
+<meta name="generator" content="Hexo 8.1.1"></head>
+<body>
+  <header>
+    <h1><a href="/blogs/">创业思考博客</a></h1>
+    <nav>
+      
+        <a href="/blogs/">首页</a>
+      
+        <a href="/blogs/archives">归档</a>
+      
+        <a href="/blogs/about">关于</a>
+      
+    </nav>
+  </header>
+  
+  <main>
+    <article>
+  <h1>DeepSeek Harness：把智能体框架做成插件化的 K8s</h1>
+  <time>2026-08-20</time>
+  
+  <div class="content post-content">
+    <p>8 月 13 日，DeepSeek AI 开源了一个名为 DeepSeek Harness 的项目。7 天之后，GitHub 星数冲到了 16.7 万，fork 数 1.78 万。</p>
+<p>这个数字放在今年 8 月的开源市场里，大概相当于什么水平？OpenAI 在 7 月发布 o3 时，相关的 demo 仓库也没能这么快冲到 16 万星。167 万星的 OpenAI-CLI 用了整整一个月。</p>
+<p>但数字不是这篇文章的重点。重点是：<strong>这个项目到底是个什么东西，它想解决什么问题，它的方法论是否成立。</strong></p>
+<p>因为说实话，167 万星背后有一个非常不寻常的架构理念——“一切皆插件”（Everything is a Plugin）。这个理念如果成立，它可能是智能体开发领域最重要的一次范式转移。</p>
+<hr>
+<h2 id="一、这是什么：一个被低估的”基础设施”"><a href="#一、这是什么：一个被低估的”基础设施”" class="headerlink" title="一、这是什么：一个被低估的”基础设施”"></a>一、这是什么：一个被低估的”基础设施”</h2><p>先说结论。DeepSeek Harness（以下简称 dsh）不是一个具体的 AI 应用。它不是聊天机器人，不是代码助手，不是自动化工作流。</p>
+<p><strong>它是一套用于构建 AI 智能体的基础设施框架。</strong></p>
+<p>打个比方——你不能用 Kubernetes 去”跑一个网站”，Kubernetes 是让你构建和运行容器的平台。同样，你也不能用 dsh 去”问一个问题”，dsh 是让你构建和运行智能体的平台。</p>
+<p>它的核心定位：</p>
+<ul>
+<li>提供模型适配层、工具注册表、会话管理、沙箱隔离、UI 交互等全套基础设施</li>
+<li>所有组件都是可替换的插件</li>
+<li>开发者通过组合插件来构建自己的智能体产品</li>
+</ul>
+<p>官方一句话：”Everything is a Plugin.”</p>
+<p>目前处于开发者预览（Developer Preview）阶段，版本 0.1.0-rc.8，今日刚发。项目明确声明”未来会有破坏兼容性的变更”。</p>
+<hr>
+<h2 id="二、167-万星的背后：不只是品牌效应"><a href="#二、167-万星的背后：不只是品牌效应" class="headerlink" title="二、167 万星的背后：不只是品牌效应"></a>二、167 万星的背后：不只是品牌效应</h2><p>167 万星 &#x2F; 7 天这个速度，如果只看数字，大概率会觉得是 DeepSeek 品牌效应 + 自动加星的产物。但仔细看代码结构和文档质量，这个项目的水准确实配得上这个关注度——至少配得上”认真看一下”。</p>
+<h3 id="2-1-代码规模"><a href="#2-1-代码规模" class="headerlink" title="2.1 代码规模"></a>2.1 代码规模</h3><p>用 pygount 风格的统计口径来看：</p>
+<table>
+<thead>
+<tr>
+<th>指标</th>
+<th>数值</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>总文件数</td>
+<td>9,060</td>
+</tr>
+<tr>
+<td>包数（package.json）</td>
+<td>255</td>
+</tr>
+<tr>
+<td>顶级包目录</td>
+<td>50</td>
+</tr>
+<tr>
+<td>TypeScript 源码</td>
+<td>~2,700 文件</td>
+</tr>
+<tr>
+<td>Markdown 文档</td>
+<td>~2,469 文件</td>
+</tr>
+<tr>
+<td>Cordis YAML 配置</td>
+<td>~1,297 文件</td>
+</tr>
+<tr>
+<td>仓库大小</td>
+<td>~118 MB</td>
+</tr>
+</tbody></table>
+<p>50 个核心包，255 个 npm 包，9000 多个文件。这个体量在开源项目里不算小——相当于一个中等规模的企业级前端框架的体量。</p>
+<h3 id="2-2-文档质量（罕见）"><a href="#2-2-文档质量（罕见）" class="headerlink" title="2.2 文档质量（罕见）"></a>2.2 文档质量（罕见）</h3><p>这是让我最意外的部分。一个 7 天的项目，文档建设达到了这个程度：</p>
+<ul>
+<li>架构总览文档（architecture.md）</li>
+<li>Cordis 框架入门教程（7 步完整教程）</li>
+<li>40+ 个子系统逐一有独立文档</li>
+<li>10+ 篇实战 Cookbook</li>
+<li>能力缝设计文档</li>
+<li>配置目录 &#x2F; 工具目录 &#x2F; 事件拓扑图</li>
+<li>防御性编程模式</li>
+<li><strong>4 篇事故复盘（Postmortem）</strong></li>
+<li>中英双语全套翻译，且有机器翻译配对校验系统</li>
+</ul>
+<p>尤其是事故复盘这一块——一个项目才 7 天，就已经写了 4 篇 postmortem，说明团队内部确实在认真对待工程质量，而不是发个 README 就跑。</p>
+<p>事故复盘的标题包括：</p>
+<ul>
+<li>ACP 默认导出丢失 inject 问题</li>
+<li>JS 表达式导致文件系统工具被禁用</li>
+<li>Web Agent GUI 反馈循环</li>
+<li>Landlock 部分通知误判子进程失败</li>
+</ul>
+<p>这些不是 marketing 出来的内容，是一个工程团队在真实开发中踩过的坑。</p>
+<hr>
+<h2 id="三、核心架构：Cordis-与”一切皆插件”"><a href="#三、核心架构：Cordis-与”一切皆插件”" class="headerlink" title="三、核心架构：Cordis 与”一切皆插件”"></a>三、核心架构：Cordis 与”一切皆插件”</h2><p>现在进入本文最核心的部分。dsh 的架构理念是否成立，取决于 Cordis 这个框架是否足够强大和优雅。</p>
+<h3 id="3-1-Cordis：是什么"><a href="#3-1-Cordis：是什么" class="headerlink" title="3.1 Cordis：是什么"></a>3.1 Cordis：是什么</h3><p>Cordis 是 dsh 底层自研的 TypeScript 插件框架，已经 vendor 进仓库。它有论文支撑——《A Programming Paradigm for Spatiotemporal Composability》。</p>
+<p>核心概念只有四个：</p>
+<table>
+<thead>
+<tr>
+<th>概念</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Context</strong></td>
+<td>共享上下文，所有插件注册和发现服务的中心</td>
+</tr>
+<tr>
+<td><strong>Service</strong></td>
+<td>可注入的服务，有生命周期管理</td>
+</tr>
+<tr>
+<td><strong>Events</strong></td>
+<td>类型化事件，插件之间的通信机制</td>
+</tr>
+<tr>
+<td><strong>Effects</strong></td>
+<td>可逆的副作用，插件卸载时自动清理</td>
+</tr>
+</tbody></table>
+<p>Cordis 的设计哲学是”时空可组合性”——空间上，插件可以在不同的 scope 里隔离；时间上，插件注册的生命周期是精确可逆的。</p>
+<h3 id="3-2-“一切皆插件”到底意味着什么"><a href="#3-2-“一切皆插件”到底意味着什么" class="headerlink" title="3.2 “一切皆插件”到底意味着什么"></a>3.2 “一切皆插件”到底意味着什么</h3><p>这句话不是 marketing slogan，而是贯穿整个架构的设计决策。</p>
+<p>在 dsh 里：</p>
+<ul>
+<li><strong>模型适配器是插件</strong> — 换一个 LLM 后端，换一个插件</li>
+<li><strong>工具注册表是插件</strong> — 增加一个新工具，写一个插件</li>
+<li><strong>会话日志是插件</strong> — 想改成 SQLite 存储，换一个插件</li>
+<li><strong>Agent 循环本身是插件</strong> — 整个推理引擎都可以替换</li>
+<li><strong>文件系统是插件</strong> — 从本地到远程沙箱，统一接口</li>
+<li><strong>Shell 执行是插件</strong> — Bash&#x2F;PwSH 通过统一的 shell seam 接入</li>
+<li><strong>沙箱是插件</strong> — Linux Landlock &#x2F; Windows ACL 各自一个插件</li>
+</ul>
+<p>这意味着：</p>
+<blockquote>
+<p>没有”核心代码不能改”的问题。你可以替换任何一层。</p>
+</blockquote>
+<h3 id="3-3-能力缝（Capability-Seam）"><a href="#3-3-能力缝（Capability-Seam）" class="headerlink" title="3.3 能力缝（Capability Seam）"></a>3.3 能力缝（Capability Seam）</h3><p>这是 Cordis 最精妙的设计。每个可替换能力有三角色：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">Service Definition (接口定义)</span><br><span class="line">        ↓</span><br><span class="line">Service Provider (实现提供者)</span><br><span class="line">        ↓</span><br><span class="line">Consumer (消费者，通常是工具)</span><br></pre></td></tr></table></figure>
+
+<p>一个能力不是一个插件，而是三个角色的组合。添加一个新能力意味着设计所有三个角色。</p>
+<p>这个设计的威力在于：<strong>更换一个 Provider，整个消费链自动更新</strong>。</p>
+<p>举例：把文件系统 Provider 从”本地”换成”E2B 远程沙箱”——Bash、PTY、LSP 全部自动跟着迁移到远程环境，不需要对消费者做任何修改。</p>
+<hr>
+<h2 id="四、Agent-循环设计：Turn-与-Step-模型"><a href="#四、Agent-循环设计：Turn-与-Step-模型" class="headerlink" title="四、Agent 循环设计：Turn 与 Step 模型"></a>四、Agent 循环设计：Turn 与 Step 模型</h2><p>dsh 的 Agent 循环设计有一个清晰的 Turn&#x2F;Step 层次：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">turn/start</span><br><span class="line">  ↓ claim next-step input + one queued message</span><br><span class="line">  ↓ assemble prompt sections + tool schemas</span><br><span class="line">  ↓</span><br><span class="line">  agent/pre-step  (可重写或拒绝消息)</span><br><span class="line">  ↓</span><br><span class="line">  step/start</span><br><span class="line">  ↓</span><br><span class="line">  append user/message → derive model history → LLM request → assistant/chunk*</span><br><span class="line">  ↓</span><br><span class="line">  tool/call* → tools/execute → tool/result*</span><br><span class="line">  ↓</span><br><span class="line">  step/end</span><br><span class="line">  ↓</span><br><span class="line">  如果有更多待处理 → 下一个 step</span><br><span class="line">  ↓</span><br><span class="line">turn/end</span><br></pre></td></tr></table></figure>
+
+<p>几个关键设计点：</p>
+<p><strong>Step</strong> &#x3D; 一次模型请求 + 调用的工具。<strong>Turn</strong> &#x3D; 零或多个 Step。一个 Turn 在它的第一条输入被消费之前保持”开放”状态，当没有更多待处理内容时关闭。</p>
+<p><strong>agent&#x2F;pre-step</strong> 事件是关键拦截点——监听者可以重写传入的消息，或者直接拒绝。被拒绝的 turn 仍然会在日志中记录为”花费了 0 个 step 的 turn”。</p>
+<p><strong>agent&#x2F;turn-stopping</strong> 是一个特殊事件，没有 next() 调用，是串行的——这意味着任何监听者都可以无条件终止一个 turn。</p>
+<h3 id="“Model-visible-means-logged”"><a href="#“Model-visible-means-logged”" class="headerlink" title="“Model-visible means logged”"></a>“Model-visible means logged”</h3><p>这是整个会话管理的核心不变量：<strong>任何到达模型请求的内容都必须可以从日志中重建出来</strong>。</p>
+<p>这意味着：</p>
+<ul>
+<li>分叉会话（fork）、恢复（resume）、转录（transcript）、遥测（telemetry）、持久化——全部从日志派生</li>
+<li>新增一种模型可见的输入，需要扩展 SessionEventMap</li>
+<li>运行时不变量（invariant）会强制校验</li>
+</ul>
+<p>这比大多数 agent 框架要严格得多。很多框架的 agent 在运行时会有一些”隐式状态”——比如中间变量、缓存、临时计算——这些在 dsh 的设计里都是不允许的。</p>
+<hr>
+<h2 id="五、50-个核心包的功能全景"><a href="#五、50-个核心包的功能全景" class="headerlink" title="五、50 个核心包的功能全景"></a>五、50 个核心包的功能全景</h2><p>用一张图来理解整个仓库的结构：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br></pre></td><td class="code"><pre><span class="line">deepseek-harness/</span><br><span class="line">├── vendor/              # 自托管框架层（Cordis + 8 个工具库）</span><br><span class="line">│   ├── cordis/          #   核心插件框架</span><br><span class="line">│   ├── cosmokit/        #   配置工具</span><br><span class="line">│   ├── schemastery/     #   Schema 验证</span><br><span class="line">│   ├── hmr/             #   热模块替换</span><br><span class="line">│   ├── loader/          #   插件加载器</span><br><span class="line">│   ├── group/           #   分组工具</span><br><span class="line">│   ├── include/         #   配置包含</span><br><span class="line">│   ├── timer/           #   定时器</span><br><span class="line">│   └── logger-console/  #   日志</span><br><span class="line">│</span><br><span class="line">├── packages/            # 50 个核心包</span><br><span class="line">│   ├── 核心引擎</span><br><span class="line">│   │   ├── core/        #   Agent 接口 / Session / System Prompt / Tools / Scope</span><br><span class="line">│   │   ├── boot/        #   启动 / Profile 组合 / CLI</span><br><span class="line">│   │   ├── bundle/      #   Web App / Headless / Base 分发</span><br><span class="line">│   │   └── llm/         #   模型适配层（DeepSeek / PI-AI）/ Token 计量 / 重试</span><br><span class="line">│   │</span><br><span class="line">│   ├── 交互层</span><br><span class="line">│   │   ├── acp/         #   AC Agent 协议</span><br><span class="line">│   │   ├── subagent/    #   子代理（fork/spawn/in-process/ACP/Claude Code/Codex）</span><br><span class="line">│   │   ├── workflow/    #   工作流引擎（Ralph 工具）</span><br><span class="line">│   │   ├── plan/        #   计划模式</span><br><span class="line">│   │   ├── goal/        #   目标管理</span><br><span class="line">│   │   └── todo/        #   任务列表</span><br><span class="line">│   │</span><br><span class="line">│   ├── 能力层</span><br><span class="line">│   │   ├── fs/          #   文件系统（搜索/编辑/沙箱/策略）</span><br><span class="line">│   │   ├── shell/       #   Bash/PwSH + 沙箱</span><br><span class="line">│   │   ├── terminal/    #   持久化终端（node-pty）</span><br><span class="line">│   │   ├── code-runtime/#   代码执行（Python/Worker Thread）</span><br><span class="line">│   │   ├── lsp/         #   LSP 语言服务</span><br><span class="line">│   │   ├── web/         #   Web 抓取 + 搜索（DeepSeek/Exa/Perplexity）</span><br><span class="line">│   │   ├── mcp/         #   MCP 客户端</span><br><span class="line">│   │   ├── skill/       #   技能系统</span><br><span class="line">│   │   ├── compaction/  #   上下文压缩</span><br><span class="line">│   │   └── context/     #   上下文注入</span><br><span class="line">│   │</span><br><span class="line">│   ├── 基础设施层</span><br><span class="line">│   │   ├── session/     #   会话持久化 / 标题生成 / 遥测</span><br><span class="line">│   │   ├── session-query/#  会话 SQL 查询</span><br><span class="line">│   │   ├── storage/     #   存储（SQLite/JSON）</span><br><span class="line">│   │   ├── settings/    #   设置管理</span><br><span class="line">│   │   ├── credentials/ #   凭据管理</span><br><span class="line">│   │   ├── sandbox/     #   沙箱策略（Landlock/ACL）</span><br><span class="line">│   │   ├── guard/       #   超时策略 / 重复提醒</span><br><span class="line">│   │   └── hooks/       #   Claude Code / Codex 钩子</span><br><span class="line">│   │</span><br><span class="line">│   └── 集成层</span><br><span class="line">│       ├── e2b/         #   E2B 云端沙箱</span><br><span class="line">│       ├── sdk/         #   Python SDK</span><br><span class="line">│       ├── examples/    #   可运行 demo</span><br><span class="line">│       └── experimental/ #  实验性特性（Agent Teams）</span><br><span class="line">│</span><br><span class="line">├── apps/                # 产品组装层</span><br><span class="line">│   ├── cli/             #   dsh CLI 入口</span><br><span class="line">│   └── web/             #   Web UI</span><br><span class="line">│</span><br><span class="line">└── native/</span><br><span class="line">    └── landlock-run/    # Linux Landlock 原生二进制</span><br></pre></td></tr></table></figure>
+
+<p>值得注意的几个包：</p>
+<p><strong>subagent&#x2F;</strong> — 子代理系统有 6 种 Provider：</p>
+<ul>
+<li>subagent-fork-in-process（进程内 fork）</li>
+<li>subagent-spawn-in-process（进程内 spawn）</li>
+<li>subagent-in-process-driver（进程内驱动）</li>
+<li>subagent-acp（ACP 协议远程）</li>
+<li>subagent-claude-code（调用 Claude Code）</li>
+<li>subagent-codex（调用 OpenAI Codex）</li>
+<li>subagent-dsh-sdk（Python SDK 调用）</li>
+</ul>
+<p>这意味着你可以把子代理任务分发给”另一个 dsh 实例”，或者”Claude Code”，或者”OpenAI Codex”，接口完全统一。</p>
+<p><strong>experimental&#x2F;agent-team&#x2F;</strong> — 实验性的 Agent Teams 特性，提供 durableroster（持久化花名册）、task board（任务板）、mailbox（邮箱），实现多 agent 协作。</p>
+<p><strong>compaction&#x2F;</strong> — 上下文压缩，有专门的 compaction-tool-result-pruner（工具结果修剪器）和 command-compact（命令压缩）。这对长上下文场景很重要。</p>
+<p><strong>session-query&#x2F;</strong> — 会话 SQL 查询引擎，支持用 SQL 查询历史会话内容。</p>
+<hr>
+<h2 id="六、安全与沙箱设计"><a href="#六、安全与沙箱设计" class="headerlink" title="六、安全与沙箱设计"></a>六、安全与沙箱设计</h2><p>安全是 agent 框架的命门。dsh 在这方面做得相当彻底。</p>
+<h3 id="Linux-Landlock"><a href="#Linux-Landlock" class="headerlink" title="Linux Landlock"></a>Linux Landlock</h3><p>Landlock 是 Linux 内核 5.13 引入的无特权沙箱机制。dsh 有独立的 native 包（landlock-run）实现 Landlock 沙箱——一个编译好的原生二进制，用 eBPF 程序限制进程的文件系统访问范围。</p>
+<p>这不同于传统的 seccomp 或 AppArmor——Landlock 允许<strong>非 root 用户</strong>创建沙箱策略，非常适合 agent 这种需要安全隔离但不想搞复杂权限管理的场景。</p>
+<h3 id="Windows-ACL"><a href="#Windows-ACL" class="headerlink" title="Windows ACL"></a>Windows ACL</h3><p>Windows 端使用 ACL（访问控制列表）沙箱，通过 sandbox-windows-acl 包实现。</p>
+<h3 id="权限预设"><a href="#权限预设" class="headerlink" title="权限预设"></a>权限预设</h3><p>permission-presets 包提供了预定义的权限集合——开发者不需要从零开始设计权限策略，可以直接用”文件读写 + 网络但无 shell”之类的预设。</p>
+<h3 id="运行时不变量"><a href="#运行时不变量" class="headerlink" title="运行时不变量"></a>运行时不变量</h3><p>runtime-diagnostics 包下的 invariants 系统会在运行时检查一系列不变条件——比如”模型可见的内容必须已记录到日志中”。这不是测试时的断言，是<strong>运行时的 invariant</strong>。</p>
+<hr>
+<h2 id="七、工程纪律：一个-7-天项目的成熟度"><a href="#七、工程纪律：一个-7-天项目的成熟度" class="headerlink" title="七、工程纪律：一个 7 天项目的成熟度"></a>七、工程纪律：一个 7 天项目的成熟度</h2><p>看完代码后，让我最意外的是这个项目的工程纪律。</p>
+<p><strong>pnpm 配置</strong>严格到令人发指：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 默认拒绝所有 install/build scripts</span></span><br><span class="line"><span class="attr">strictDepBuilds:</span> <span class="literal">true</span>  <span class="comment"># 未列出的脚本 = 安装错误</span></span><br><span class="line"></span><br><span class="line"><span class="attr">allowBuilds:</span></span><br><span class="line">  <span class="attr">esbuild:</span> <span class="literal">true</span>      <span class="comment"># 真正需要的</span></span><br><span class="line">  <span class="attr">lefthook:</span> <span class="literal">true</span>     <span class="comment"># git hooks</span></span><br><span class="line">  <span class="attr">node-pty:</span> <span class="literal">true</span>     <span class="comment"># PTY 跨平台</span></span><br><span class="line">  <span class="attr">koffi:</span> <span class="literal">true</span>        <span class="comment"># Windows 原子写入</span></span><br><span class="line">  <span class="attr">&#x27;@google/genai&#x27;:</span> <span class="literal">false</span>       <span class="comment"># 不需要，明确拒绝</span></span><br><span class="line">  <span class="attr">protobufjs:</span> <span class="literal">false</span>            <span class="comment"># 不需要，明确拒绝</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>15 个 CI 工作流</strong>：</p>
+<ul>
+<li>ci.yml — 全量 CI</li>
+<li>e2e.yml + e2b-e2e.yml — 端到端测试（含云端沙箱）</li>
+<li>landlock-run.yml — Landlock 安全测试</li>
+<li>sandbox.yml — 沙箱安全测试</li>
+<li>python-release.yml — Python SDK 发布</li>
+<li>pi-ai-provider-e2e.yml — PI-AI 模型后端集成测试</li>
+<li>docs-pages.yml — 文档站部署</li>
+<li>expected-filenames.yml — <strong>文件名规范检查</strong>（这个太离谱了）</li>
+</ul>
+<p>一个”文件名规范检查”的 CI 工作流——意味着仓库里所有文件的命名都要符合预设规则。</p>
+<p><strong>测试体系</strong>：</p>
+<ul>
+<li>vitest 主测试框架</li>
+<li>覆盖率分区（coverage partitions）</li>
+<li>e2e 测试覆盖云端沙箱</li>
+<li>Web stress tests（独立配置）</li>
+<li>Web performance tests（独立配置）</li>
+</ul>
+<p><strong>oxlint</strong> — 用 Rust 写的 JS&#x2F;TS lint 工具，比 ESLint 快 3-60 倍。dsh 用 oxlint 做 lint，有独立的 staged 配置文件。</p>
+<hr>
+<h2 id="八、Python-SDK-与单文件部署"><a href="#八、Python-SDK-与单文件部署" class="headerlink" title="八、Python SDK 与单文件部署"></a>八、Python SDK 与单文件部署</h2><p>仓库包含一个完整的 Python SDK：</p>
+<ul>
+<li><code>python/sdk/</code> — Python 包（pyproject.toml）</li>
+<li><code>python/sdk-runtime/</code> — <strong>单文件 exe 部署运行时</strong></li>
+</ul>
+<p>单文件 exe 部署是什么意思？就是把整个 Node.js runtime + dsh 核心 + 插件打包成一个单独的可执行文件。Python SDK 调用这个 exe，通过 JSON-RPC 协议通信。</p>
+<p>这个设计很聪明：Python 开发者可以用 Python 写 agent 逻辑，但实际执行引擎是高性能的 TypeScript 实现。</p>
+<hr>
+<h2 id="九、我的评估：优势和风险"><a href="#九、我的评估：优势和风险" class="headerlink" title="九、我的评估：优势和风险"></a>九、我的评估：优势和风险</h2><h3 id="优势"><a href="#优势" class="headerlink" title="优势"></a>优势</h3><p><strong>1. 架构理念真正落地</strong></p>
+<p>“一切皆插件”不是喊口号——50 个包，每个都是独立可替换的单元。模型适配器、文件系统、Shell、沙箱、子代理、UI——全部可插拔。这种设计在开源 agent 框架中是罕见的。</p>
+<p>对比：</p>
+<ul>
+<li>LangChain：插件化更多是”可组合”而不是”可替换”</li>
+<li>CrewAI：主要是多 agent 编排，不是基础设施层</li>
+<li>AutoGen：微软出品，但架构是”agent 对话”而不是”插件缝”</li>
+<li>dsh：真正的能力缝设计，Provider 替换影响整个消费链</li>
+</ul>
+<p><strong>2. 文档质量罕见</strong></p>
+<p>40+ 子系统文档、7 步 Cordis 教程、4 篇事故复盘、完整中英双语——一个 7 天的项目做到这个程度，说明团队投入是认真的。</p>
+<p><strong>3. 安全考虑周全</strong></p>
+<p>Landlock + ACL 双平台沙箱、权限预设、运行时不变量、strictDepBuilds——安全不是事后补的，是架构设计的一部分。</p>
+<p><strong>4. 子代理系统统一</strong></p>
+<p>能 fork 进程内、spawn 进程内、用 ACP 远程、调 Claude Code、调 Codex——一个接口覆盖所有场景。</p>
+<h3 id="风险与不确定性"><a href="#风险与不确定性" class="headerlink" title="风险与不确定性"></a>风险与不确定性</h3><p><strong>1. 品牌效应 ≠ 社区活力</strong></p>
+<p>167 万星 &#x2F; 7 天，大概率有 DeepSeek 品牌预热的成分。0 open issues 说明要么项目完美，要么社区还没真正用起来。真实价值要等 rc 稳定后看社区 PR 和讨论质量。</p>
+<p><strong>2. 开发者预览 &#x3D; 不承诺兼容性</strong></p>
+<p>明确写了”THERE WILL BE COMPATIBILITY-BREAKING CHANGES”。这意味着现在写的插件，rc.9 可能就挂了。生产环境不要碰。</p>
+<p><strong>3. 学习曲线陡峭</strong></p>
+<p>50 个包、4 个概念（Context&#x2F;Service&#x2F;Events&#x2F;Effects）、能力缝的三角色设计——这不是一个”npx 就跑”的玩具项目。要真正用好它，需要理解 Cordis 的时空可组合性理念。</p>
+<p><strong>4. 模型后端有限</strong></p>
+<p>目前只有 DeepSeek 和 PI-AI 两个后端。OpenAI、Anthropic、Google 需要自己写适配器。虽然适配器是插件化的——理论上不难写——但目前生态不成熟。</p>
+<p><strong>5. 中文社区的独特性</strong></p>
+<p>README 里有企微群和微信公众号的二维码，说明 DeepSeek 在构建一个以中文开发者为主的社区生态。这对中国开发者是优势，对国际社区可能是壁垒。</p>
+<hr>
+<h2 id="十、定位判断：这可能是-Agent-基础设施的”Kubernetes-时刻”"><a href="#十、定位判断：这可能是-Agent-基础设施的”Kubernetes-时刻”" class="headerlink" title="十、定位判断：这可能是 Agent 基础设施的”Kubernetes 时刻”"></a>十、定位判断：这可能是 Agent 基础设施的”Kubernetes 时刻”</h2><p>回到最初的问题——dsh 到底是什么？</p>
+<p>我认为它的野心是成为 <strong>agent 开发的基础设施层</strong>，类似于：</p>
+<ul>
+<li>Kubernetes 之于容器编排</li>
+<li>Spring Boot 之于 Java 企业开发</li>
+<li>pnpm workspace 之于 Node.js monorepo</li>
+</ul>
+<p>如果这个定位成立，dsh 的成功不取决于它自己的功能有多好，而取决于：</p>
+<ol>
+<li>插件生态是否繁荣</li>
+<li>开发者是否愿意围绕它构建产品</li>
+<li>“能力缝”这个设计理念是否被社区接受</li>
+</ol>
+<p>目前 167 万星只是一个开始。真正的考验在 rc 稳定后——社区会写出多少高质量的插件？会不会有人基于 dsh 构建出有影响力的 agent 产品？</p>
+<hr>
+<h2 id="十一、给开发者的建议"><a href="#十一、给开发者的建议" class="headerlink" title="十一、给开发者的建议"></a>十一、给开发者的建议</h2><p><strong>如果你在考虑学习或尝试 dsh：</strong></p>
+<ul>
+<li>先读 Cordis primer（<code>docs/cordis-primer.md</code>）——30 分钟入门</li>
+<li>然后读 7 步 Cordis 教程（<code>docs/cordis-tutorial/</code>）——2 小时</li>
+<li>用 <code>npx @deepseek-ai/dsh web</code> 跑起来试试——5 分钟</li>
+<li>不要急着写插件，先理解”能力缝”的三角色设计</li>
+</ul>
+<p><strong>如果你在评估 dsh 作为技术选型：</strong></p>
+<ul>
+<li>目前是 Developer Preview，不要用于生产</li>
+<li>核心架构理念有说服力，但需要等 rc 稳定观察生态</li>
+<li>对比 LangChain &#x2F; CrewAI &#x2F; AutoGen 时，关注”可替换性”而非”功能列表”</li>
+<li>关注社区插件增长速度和 PR 质量，这比 star 数更有意义</li>
+</ul>
+<hr>
+<h2 id="最后"><a href="#最后" class="headerlink" title="最后"></a>最后</h2><p>6 天 167 万星，这个数字本身已经说明问题了。DeepSeek 不仅仅是在做模型，它在构建整个 agent 生态的基础设施。</p>
+<p>从 DeepSeek-V3 的开源，到 R1 的推理开源，再到现在的 Harness——DeepSeek 的战略路径很清晰：<strong>先用模型建立影响力，再用工具链构建生态，最终成为 agent 时代的基础设施提供者。</strong></p>
+<p>这个项目值不值得关注？值得。<br>这个项目现在能不能用？不能。<br>这个项目 6 个月后是什么样子？这取决于社区。</p>
+<blockquote>
+<p>“最好的开源项目不是 star 最多的，而是 6 个月后还在被认真维护、还在被社区使用的。”</p>
+</blockquote>
+<hr>
+<p><em>参考链接：</em></p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/deepseek-ai/deepseek-harness">deepseek-ai&#x2F;deepseek-harness (GitHub)</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/cordiverse/paper">Cordis 论文: A Programming Paradigm for Spatiotemporal Composability</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/cordiverse/cordis">Cordis 框架 (GitHub)</a></li>
+<li><a target="_blank" rel="noopener" href="https://deepseek.com/harness">DeepSeek Harness 官网</a></li>
+</ul>
+
+  </div>
+  
+  
+    <div class="tags">
+      标签: 
+      
+        <a href="/blogs/tags/AI/">#AI</a>
+      
+        <a href="/blogs/tags/%E6%99%BA%E8%83%BD%E4%BD%93/">#智能体</a>
+      
+        <a href="/blogs/tags/%E5%BC%80%E6%BA%90/">#开源</a>
+      
+        <a href="/blogs/tags/%E6%9E%B6%E6%9E%84%E5%88%86%E6%9E%90/">#架构分析</a>
+      
+        <a href="/blogs/tags/DeepSeek/">#DeepSeek</a>
+      
+    </div>
+  
+</article>
+  </main>
+  
+  <footer>
+    <p>© 2025 创业思考博客</p>
+  </footer>
+</body>
+</html>
