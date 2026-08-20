@@ -27,8 +27,17 @@
   <main>
     
   <article>
+    <h2><a href="/blogs/2026/08/20/deepseek-harness-vs-hermes-agent/">DeepSeek Harness 与 Hermes Agent：引擎与整车的区别</a></h2>
+    <time>2026-08-20 15:08</time>
+    <div class="excerpt">
+      一个经常被问到的问题刚写完 DeepSeek 系列文章，一个朋友问我：”你们说的 DeepSeek Harness，和 Hermes Agent 那个是不是类似的东西？我搞糊涂了。”
+这个问题问得特别好。事实上，很多刚开始接触 AI 工具的人都会把这两个东西混为一谈——它们都和”AI 帮你做事”有关，名字听起来也差不多高大上。但实际上，它们是不同层面的东西，而且更重要的是，它们是互补的，不是...
+    </div>
+  </article>
+
+  <article>
     <h2><a href="/blogs/2026/08/20/deepseek-harness-everything-is-a-plugin/">DeepSeek Harness：把智能体框架做成插件化的 K8s</a></h2>
-    <time>2026-08-20</time>
+    <time>2026-08-20 14:08</time>
     <div class="excerpt">
       8 月 13 日，DeepSeek AI 开源了一个名为 DeepSeek Harness 的项目。7 天之后，GitHub 星数冲到了 16.7 万，fork 数 1.78 万。
 这个数字放在今年 8 月的开源市场里，大概相当于什么水平？OpenAI 在 7 月发布 o3 时，相关的 demo 仓库也没能这么快冲到 16 万星。167 万星的 OpenAI-CLI 用了整整一个月。
@@ -38,7 +47,7 @@
 
   <article>
     <h2><a href="/blogs/2026/08/20/deepseek-harness-05-rag-agent/">DeepSeek + RAG + Agent：构建可落地的 AI 应用完整指南</a></h2>
-    <time>2026-08-20</time>
+    <time>2026-08-20 13:08</time>
     <div class="excerpt">
       什么是”真正能用”的 AI 应用2025 年的时候，市面上充斥着各种”AI 应用”——AI 写作助手、AI 翻译工具、AI 聊天机器人。大多数都不过是把一个大模型的 API 包了一层 UI。它们有一个共同的问题：当模型”不知道”的时候，它们就开始编造。
 真正有价值的 AI 应用必须解决两个问题：第一，让模型知道它不知道什么；第二，当模型不知道的时候，它能从外部获取正确的信息。这就是 RAG（...
@@ -47,7 +56,7 @@
 
   <article>
     <h2><a href="/blogs/2026/08/20/deepseek-harness-04-cost-analysis/">DeepSeek 成本深度分析：从 API 定价到自建集群的经济账</a></h2>
-    <time>2026-08-20</time>
+    <time>2026-08-20 12:08</time>
     <div class="excerpt">
       一个真实的账本上个月我帮一个朋友算了一笔账。他在做一个 AI 客服产品，每天需要调用约 50 万次 API。他一直在用 GPT-4o，每个月的花费超过了 8 万元。我帮他切换到了 DeepSeek V4-Flash 之后，同样的质量水平下，月成本降到了 1.2 万元。
 这不是个例。DeepSeek 最核心的竞争优势之一就是它的定价——但很多人其实没有把它算清楚。这篇文章我就把 DeepSee...
@@ -56,7 +65,7 @@
 
   <article>
     <h2><a href="/blogs/2026/08/20/deepseek-harness-03-local-deployment/">DeepSeek 本地部署实战：从 RTX 3060 到多卡集群的完整方案</a></h2>
-    <time>2026-08-20</time>
+    <time>2026-08-20 11:08</time>
     <div class="excerpt">
       为什么要在本地跑 DeepSeekAPI 调用很方便，但有几个场景你必须考虑本地部署：
 
@@ -71,7 +80,7 @@ DeepSeek 的一个巨大优势是它的开源策略。V3、R1、V3.2、V4-Flash 
 
   <article>
     <h2><a href="/blogs/2026/08/20/deepseek-harness-02-api-practical-guide/">DeepSeek 开发者实战：API 调用、思考模式与成本优化</a></h2>
-    <time>2026-08-20</time>
+    <time>2026-08-20 10:08</time>
     <div class="excerpt">
       一个真实的困扰上周我在给朋友调试一个 DeepSeek API 的调用时，他困惑地问我：”为什么我用了 V4-Pro 反而比 V4-Flash 慢了好几倍，而且输出还特别长？”
 我一看他的代码——他开启了两层”思考”：API 层面的 enable_thinking: true，又在 prompt 里写了”请逐步推理并解释你的思考过程”。结果是模型先在内部做了长时间的 reasoning，然后...
@@ -80,7 +89,7 @@ DeepSeek 的一个巨大优势是它的开源策略。V3、R1、V3.2、V4-Flash 
 
   <article>
     <h2><a href="/blogs/2026/08/20/deepseek-harness-01-architecture/">DeepSeek 技术架构全景：从 V3 到 V4 的演进与核心创新</a></h2>
-    <time>2026-08-20</time>
+    <time>2026-08-20 09:08</time>
     <div class="excerpt">
       为什么值得花时间理解 DeepSeek 的架构2026 年 8 月，当我打开 Hugging Face 的排行榜时，DeepSeek 家族的身影几乎占据了整个视野。DeepSeek-V3 下载量超过 105 万，DeepSeek-V4-Flash 超过 188 万，DeepSeek-R1 更是突破 690 万——这还不包括那些基于它们蒸馏出来的小模型。
 作为一个每天要和 AI 打交道的程序员...
@@ -89,7 +98,7 @@ DeepSeek 的一个巨大优势是它的开源策略。V3、R1、V3.2、V4-Flash 
 
   <article>
     <h2><a href="/blogs/2026/08/12/android-tablet-linux-termux-avnc/">把安卓平板变成 Linux 电脑：Termux、F-Droid 与 AVNC 的组合实践</a></h2>
-    <time>2026-08-12</time>
+    <time>2026-08-12 20:08</time>
     <div class="excerpt">
       一块平板，和它本该有的样子我手边有一块安卓平板。它的日常用法很无聊——看视频、刷网页、偶尔写点笔记。但从技术上讲，这块平板里有颗 ARM 处理器、有 8GB 以上内存、有 GPU，性能不比一台入门的 Chromebook 差。它只是被安卓系统”封印”了。
 怎么解封？
@@ -99,7 +108,7 @@ DeepSeek 的一个巨大优势是它的开源策略。V3、R1、V3.2、V4-Flash 
 
   <article>
     <h2><a href="/blogs/2026/08/12/unbeatable-strategy-2026/">先守不败，再缓图之：一个失业程序员的2026年大战略</a></h2>
-    <time>2026-08-12</time>
+    <time>2026-08-12 14:08</time>
     <div class="excerpt">
       从三选一，到一守二备前一篇博客里，我把自己的处境摊在桌面上：三条路——接应用单、做失业搭子、搞AI视频。结论是”选AI视频”，但结论写完后，心里并不踏实。因为”选”这个动作太轻了，轻到像一个赌注，而不像一个战略。
 赌注的逻辑是：”我看好这个，所以我all in。”战略的逻辑是：”我先把最坏的结果锁死，再在剩下的空间里找最好的机会。”
@@ -110,7 +119,7 @@ DeepSeek 的一个巨大优势是它的开源策略。V3、R1、V3.2、V4-Flash 
 
   <article>
     <h2><a href="/blogs/2026/08/11/work-direction-analysis-2026/">三个方向，一个选择：我在失业状态下重新评估工作路径</a></h2>
-    <time>2026-08-11</time>
+    <time>2026-08-11 10:08</time>
     <div class="excerpt">
       
 引言失业第 180 天，我做了个决定：把过去半年所有的想法集中做一次系统评估。
@@ -121,17 +130,6 @@ DeepSeek 的一个巨大优势是它的开源策略。V3、R1、V3.2、V4-Flash 
 做失业搭子软件——把已经分析了五篇博客的产品真正做出来
 
 这三条路每一条都能写一本书。这篇文章不展开，只做一个事：把它们放在同一个框架下，看...
-    </div>
-  </article>
-
-  <article>
-    <h2><a href="/blogs/2026/08/11/minimax-h3-vs-wan21/">MiniMax H3 与 Wan2.1：视频生成模型的分岔路口</a></h2>
-    <time>2026-08-11</time>
-    <div class="excerpt">
-      
-引言：两条路，同一个目的地2026 年夏天的视频生成领域，有两颗重磅炸弹值得放在一起看。
-第一颗是 MiniMax H3——7 月 31 日，MiniMax 正式发布，定位是”通用的全模态生成模型”，号称能统一处理文本、图像、视频、音频，最高支持 15 秒 2K 分辨率。
-第二颗是 Wan2.1——2025 年 2 月开源，由阿里通义万相团队推出，是当时首个能在消费级显卡上跑的文生视频模型...
     </div>
   </article>
 

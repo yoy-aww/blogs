@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>DeepSeek Harness 与 Hermes Agent：引擎与整车的区别 | 创业思考博客</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/blogs/css/style.css">
+<meta name="generator" content="Hexo 8.1.1"></head>
+<body>
+  <header>
+    <h1><a href="/blogs/">创业思考博客</a></h1>
+    <nav>
+      
+        <a href="/blogs/">首页</a>
+      
+        <a href="/blogs/archives">归档</a>
+      
+        <a href="/blogs/about">关于</a>
+      
+    </nav>
+  </header>
+  
+  <main>
+    <article>
+  <h1>DeepSeek Harness 与 Hermes Agent：引擎与整车的区别</h1>
+  <time>2026-08-20</time>
+  
+  <div class="content post-content">
+    <h2 id="一个经常被问到的问题"><a href="#一个经常被问到的问题" class="headerlink" title="一个经常被问到的问题"></a>一个经常被问到的问题</h2><p>刚写完 DeepSeek 系列文章，一个朋友问我：”你们说的 DeepSeek Harness，和 Hermes Agent 那个是不是类似的东西？我搞糊涂了。”</p>
+<p>这个问题问得特别好。事实上，很多刚开始接触 AI 工具的人都会把这两个东西混为一谈——它们都和”AI 帮你做事”有关，名字听起来也差不多高大上。但实际上，它们是不同层面的东西，而且更重要的是，它们是互补的，不是竞争关系。</p>
+<p>这篇文章我就把这两个东西摊开来讲清楚。</p>
+<h2 id="先定义：它们到底是什么"><a href="#先定义：它们到底是什么" class="headerlink" title="先定义：它们到底是什么"></a>先定义：它们到底是什么</h2><h3 id="DeepSeek-Harness：一个-LLM-服务平台"><a href="#DeepSeek-Harness：一个-LLM-服务平台" class="headerlink" title="DeepSeek Harness：一个 LLM 服务平台"></a>DeepSeek Harness：一个 LLM 服务平台</h3><p>DeepSeek Harness 是 DeepSeek 公司提供的 API 平台。你给它一个 prompt（提示词），它返回一段文本。就这么简单。</p>
+<p>它有这些特性：</p>
+<ul>
+<li>多个模型可选（V4-Flash、V4-Pro）</li>
+<li>思考模式（<code>enable_thinking</code>），让模型先推理再回答</li>
+<li>Tool Calls，支持让模型调用外部工具</li>
+<li>100 万 token 的上下文长度</li>
+<li>开源模型（V4-Flash 是 MIT 许可证）</li>
+</ul>
+<p>但请注意——它不会替你跑终端命令，不会帮你改代码，不会帮你部署博客，不会记住你昨天说过什么。它就是一个大模型接口，你做的一切都是”调用 API，拿回文本”。</p>
+<h3 id="Hermes-Agent：一个-AI-Agent-框架"><a href="#Hermes-Agent：一个-AI-Agent-框架" class="headerlink" title="Hermes Agent：一个 AI Agent 框架"></a>Hermes Agent：一个 AI Agent 框架</h3><p>Hermes 是一个开源的 AI Agent 框架。它做的事情是：接收一个指令 → 自动拆解任务 → 调用一系列工具（终端、文件、浏览器、代码执行等）→ 完成任务并给出结果。</p>
+<p>它有这些特性：</p>
+<ul>
+<li>30 多种工具集（terminal、browser、file、code_execution、memory、cron、messaging…）</li>
+<li>跨会话持久化记忆（记住你是谁、你的偏好、你的环境）</li>
+<li>Skills 系统（把成功经验保存下来，下次复用）</li>
+<li>定时任务（Cron 调度）</li>
+<li>多平台消息推送（Telegram、Discord、微信…）</li>
+<li>多 Agent 协作（delegate_task 并行分派子任务）</li>
+<li>支持 20+ 个模型提供商</li>
+</ul>
+<p>它底层用的模型，可以是 DeepSeek，也可以是 Claude、GPT、Grok——任何支持 OpenAI 兼容格式的 API 都可以。</p>
+<h2 id="一个直观类比"><a href="#一个直观类比" class="headerlink" title="一个直观类比"></a>一个直观类比</h2><p>最简单的理解方式：</p>
+<blockquote>
+<p>DeepSeek Harness 是发动机。Hermes 是一辆完整的汽车——有方向盘、仪表盘、自动驾驶系统，而那颗发动机恰好可以是 DeepSeek。</p>
+</blockquote>
+<p>没有发动机，汽车跑不起来。但没有汽车，发动机就是一堆铁。</p>
+<h2 id="能力对比：一张表说清楚"><a href="#能力对比：一张表说清楚" class="headerlink" title="能力对比：一张表说清楚"></a>能力对比：一张表说清楚</h2><table>
+<thead>
+<tr>
+<th>能力</th>
+<th>DeepSeek Harness</th>
+<th>Hermes Agent</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>文本生成</td>
+<td>✅ 核心能力</td>
+<td>✅（通过调用 DeepSeek）</td>
+</tr>
+<tr>
+<td>深度推理（思考模式）</td>
+<td>✅</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>原生 Tool Calls</td>
+<td>✅</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>终端命令执行</td>
+<td>❌</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>文件读写 &#x2F; 代码编辑</td>
+<td>❌</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>浏览器自动化</td>
+<td>❌</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>沙箱代码执行</td>
+<td>❌</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>跨会话记忆</td>
+<td>❌</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>Skills 自学习</td>
+<td>❌</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>定时任务调度</td>
+<td>❌</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>多平台消息推送</td>
+<td>❌</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>多 Agent 协作</td>
+<td>❌</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>本地部署</td>
+<td>✅（模型开源）</td>
+<td>✅（本地运行）</td>
+</tr>
+<tr>
+<td>自托管</td>
+<td>✅（自部署模型）</td>
+<td>✅（自部署框架）</td>
+</tr>
+</tbody></table>
+<p>从这张表可以看出，DeepSeek 提供的是”核心推理能力”，而 Hermes 提供的是”围绕这个能力的一切工程化能力”。</p>
+<h2 id="最关键的三个差异"><a href="#最关键的三个差异" class="headerlink" title="最关键的三个差异"></a>最关键的三个差异</h2><h3 id="差异一：执行能力"><a href="#差异一：执行能力" class="headerlink" title="差异一：执行能力"></a>差异一：执行能力</h3><p>这是最本质的区别。DeepSeek 只能”说”，不能”做”。Hermes 既能”说”也能”做”。</p>
+<p>比如你刚才说的”写 5 篇博客并部署”这件事：</p>
+<ul>
+<li>DeepSeek API 可以帮你<strong>生成</strong>博客内容（文本）</li>
+<li>但它不能把内容写到文件里、不能运行 git commit、不能执行 <code>npx hexo deploy</code>、不能验证格式是否正确</li>
+</ul>
+<p>Hermes 可以——因为它有 terminal 工具、file 工具、git 工具，它可以一整套自动化完成。</p>
+<h3 id="差异二：记忆与上下文"><a href="#差异二：记忆与上下文" class="headerlink" title="差异二：记忆与上下文"></a>差异二：记忆与上下文</h3><p>DeepSeek API 每次调用都是独立的。你说”你好”，它回应你；你说”我是谁”，它不知道你是谁。除非你每次调用都手动传入历史对话——但这很麻烦，而且容易超出上下文长度限制。</p>
+<p>Hermes 有持久化记忆系统。它会记住：</p>
+<ul>
+<li>你是谁（用户画像）</li>
+<li>你的偏好（喜欢什么风格、什么技术栈）</li>
+<li>你的环境（操作系统、目录结构、安装的软件）</li>
+<li>过去的对话和经验（通过 Skills 系统保存下来）</li>
+</ul>
+<p>这意味着你不需要每次重复告诉它”我是什么人”。它在多次会话中持续积累关于你的信息，越用越懂你。</p>
+<h3 id="差异三：自动化与持久性"><a href="#差异三：自动化与持久性" class="headerlink" title="差异三：自动化与持久性"></a>差异三：自动化与持久性</h3><p>DeepSeek API 是”你问，它答”。你不问，它不做事。</p>
+<p>Hermes 有 Cron 系统，可以设置定时任务——每天早上 9 点自动跑一段代码、每周三自动检查某些指标、每月 1 号自动生成报告。它还有 webhook 订阅，可以被外部事件触发。</p>
+<p>这意味着 Hermes 不只是一个”对话工具”，它是一个可以持续运行的自动化系统。</p>
+<h2 id="它们如何协作？"><a href="#它们如何协作？" class="headerlink" title="它们如何协作？"></a>它们如何协作？</h2><p>这里有个很多人没意识到的事实：Hermes 底层用的模型，<strong>正好可以是 DeepSeek</strong>。</p>
+<p>当你配置 Hermes 的默认模型为 DeepSeek V4-Pro 时，Hermes 的所有”思考”和”决策”都是由 DeepSeek 的大脑完成的。Hermes 负责的是”把 DeepSeek 的思考转化为实际行动”——调用工具、执行命令、管理记忆。</p>
+<p>这个组合非常强大：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">用户指令</span><br><span class="line">    ↓</span><br><span class="line">Hermes 拆解任务 + 记忆检索 + 工具规划</span><br><span class="line">    ↓</span><br><span class="line">调用 DeepSeek API（提供推理能力）</span><br><span class="line">    ↓</span><br><span class="line">执行工具（terminal / file / browser / ...）</span><br><span class="line">    ↓</span><br><span class="line">保存经验为 Skill</span><br><span class="line">    ↓</span><br><span class="line">返回结果给用户</span><br></pre></td></tr></table></figure>
+
+<p>DeepSeek 是”大脑”，Hermes 是”手脚和记忆”。</p>
+<h2 id="什么时候只用-DeepSeek"><a href="#什么时候只用-DeepSeek" class="headerlink" title="什么时候只用 DeepSeek"></a>什么时候只用 DeepSeek</h2><p>如果你只是需要一个强大的文本生成或推理工具，DeepSeek API 完全够用：</p>
+<ul>
+<li>内容创作（写文章、写代码）</li>
+<li>问答系统</li>
+<li>RAG 检索增强</li>
+<li>简单的 Agent 调用（自己写代码做）</li>
+</ul>
+<p>你不需要 Hermes 的复杂工程能力，DeepSeek 就够了。</p>
+<h2 id="什么时候需要-Hermes"><a href="#什么时候需要-Hermes" class="headerlink" title="什么时候需要 Hermes"></a>什么时候需要 Hermes</h2><p>如果你需要的是一个能自主完成任务的 AI 系统：</p>
+<ul>
+<li>自动化工作流（定时任务、批量处理）</li>
+<li>多步骤任务（先调研、再写代码、再测试、再部署）</li>
+<li>需要记忆和上下文（持续使用，不想重复说明）</li>
+<li>需要跨平台交互（在 Telegram&#x2F;Discord 上直接对话）</li>
+</ul>
+<p>Hermes 才是正确选择——当然，它的”大脑”可以是 DeepSeek。</p>
+<h2 id="一句话总结"><a href="#一句话总结" class="headerlink" title="一句话总结"></a>一句话总结</h2><blockquote>
+<p>DeepSeek Harness 是一个<strong>引擎</strong>，Hermes Agent 是一辆<strong>整车</strong>。前者提供推理能力，后者提供执行、记忆、自动化能力。它们不是竞争关系——它们天然协作，组合起来才是真正强大的 AI 系统。</p>
+</blockquote>
+<p>这也是为什么 Hermes 从一开始就支持 DeepSeek 作为模型提供商——这是一个经过深思熟虑的设计选择，而不是随机的功能叠加。</p>
+
+  </div>
+  
+  
+    <div class="tags">
+      标签: 
+      
+        <a href="/blogs/tags/DeepSeek/">#DeepSeek</a>
+      
+        <a href="/blogs/tags/%E5%88%9B%E4%B8%9A/">#创业</a>
+      
+        <a href="/blogs/tags/Hermes/">#Hermes</a>
+      
+        <a href="/blogs/tags/AI-Agent/">#AI Agent</a>
+      
+        <a href="/blogs/tags/%E6%A1%86%E6%9E%B6%E5%AF%B9%E6%AF%94/">#框架对比</a>
+      
+    </div>
+  
+</article>
+  </main>
+  
+  <footer>
+    <p>© 2025 创业思考博客</p>
+  </footer>
+</body>
+</html>
