@@ -37,6 +37,57 @@
   </article>
 
   <article>
+    <h2><a href="/blogs/2026/08/20/deepseek-harness-05-rag-agent/">DeepSeek + RAG + Agent：构建可落地的 AI 应用完整指南</a></h2>
+    <time>2026-08-20</time>
+    <div class="excerpt">
+      什么是”真正能用”的 AI 应用2025 年的时候，市面上充斥着各种”AI 应用”——AI 写作助手、AI 翻译工具、AI 聊天机器人。大多数都不过是把一个大模型的 API 包了一层 UI。它们有一个共同的问题：当模型”不知道”的时候，它们就开始编造。
+真正有价值的 AI 应用必须解决两个问题：第一，让模型知道它不知道什么；第二，当模型不知道的时候，它能从外部获取正确的信息。这就是 RAG（...
+    </div>
+  </article>
+
+  <article>
+    <h2><a href="/blogs/2026/08/20/deepseek-harness-04-cost-analysis/">DeepSeek 成本深度分析：从 API 定价到自建集群的经济账</a></h2>
+    <time>2026-08-20</time>
+    <div class="excerpt">
+      一个真实的账本上个月我帮一个朋友算了一笔账。他在做一个 AI 客服产品，每天需要调用约 50 万次 API。他一直在用 GPT-4o，每个月的花费超过了 8 万元。我帮他切换到了 DeepSeek V4-Flash 之后，同样的质量水平下，月成本降到了 1.2 万元。
+这不是个例。DeepSeek 最核心的竞争优势之一就是它的定价——但很多人其实没有把它算清楚。这篇文章我就把 DeepSee...
+    </div>
+  </article>
+
+  <article>
+    <h2><a href="/blogs/2026/08/20/deepseek-harness-03-local-deployment/">DeepSeek 本地部署实战：从 RTX 3060 到多卡集群的完整方案</a></h2>
+    <time>2026-08-20</time>
+    <div class="excerpt">
+      为什么要在本地跑 DeepSeekAPI 调用很方便，但有几个场景你必须考虑本地部署：
+
+你有敏感数据，不能发送到外部服务器
+你需要的 QPS 很高，API 成本超过了自建成本
+你想做模型的二次开发或微调
+你需要完全可控的部署环境
+
+DeepSeek 的一个巨大优势是它的开源策略。V3、R1、V3.2、V4-Flash 都是 MIT 许可证——你可以自由使用、修改、分发，没有任何限制。相比之...
+    </div>
+  </article>
+
+  <article>
+    <h2><a href="/blogs/2026/08/20/deepseek-harness-02-api-practical-guide/">DeepSeek 开发者实战：API 调用、思考模式与成本优化</a></h2>
+    <time>2026-08-20</time>
+    <div class="excerpt">
+      一个真实的困扰上周我在给朋友调试一个 DeepSeek API 的调用时，他困惑地问我：”为什么我用了 V4-Pro 反而比 V4-Flash 慢了好几倍，而且输出还特别长？”
+我一看他的代码——他开启了两层”思考”：API 层面的 enable_thinking: true，又在 prompt 里写了”请逐步推理并解释你的思考过程”。结果是模型先在内部做了长时间的 reasoning，然后...
+    </div>
+  </article>
+
+  <article>
+    <h2><a href="/blogs/2026/08/20/deepseek-harness-01-architecture/">DeepSeek 技术架构全景：从 V3 到 V4 的演进与核心创新</a></h2>
+    <time>2026-08-20</time>
+    <div class="excerpt">
+      为什么值得花时间理解 DeepSeek 的架构2026 年 8 月，当我打开 Hugging Face 的排行榜时，DeepSeek 家族的身影几乎占据了整个视野。DeepSeek-V3 下载量超过 105 万，DeepSeek-V4-Flash 超过 188 万，DeepSeek-R1 更是突破 690 万——这还不包括那些基于它们蒸馏出来的小模型。
+作为一个每天要和 AI 打交道的程序员...
+    </div>
+  </article>
+
+  <article>
     <h2><a href="/blogs/2026/08/12/android-tablet-linux-termux-avnc/">把安卓平板变成 Linux 电脑：Termux、F-Droid 与 AVNC 的组合实践</a></h2>
     <time>2026-08-12</time>
     <div class="excerpt">
@@ -84,83 +135,10 @@
     </div>
   </article>
 
-  <article>
-    <h2><a href="/blogs/2026/08/11/grill-me-learning/">Grill-Me：让 AI Agent 学会先&#39;拷问&#39;再动手</a></h2>
-    <time>2026-08-11</time>
-    <div class="excerpt">
-      
-一、一个让人血压升高的 AI 对话你可能经历过这样的场景：
-
-你：”帮我把这个函数的性能优化一下。”AI：[花了 30 秒生成了一段代码，改了你根本不想改的部分，用了你根本不想要的库]
-
-或者更糟的：
-
-你：”重构一下这个模块。”AI：[删掉了你花了三周写的业务逻辑，替换成了”更优雅”的三行代码，编译都过不了]
-
-这个问题的根源是什么？不是 AI 不够聪明，而是 AI 太急于执行。
-大语言...
-    </div>
-  </article>
-
-  <article>
-    <h2><a href="/blogs/2026/08/07/sports-social-app-state-machine-design/">运动社交 App 组局业务流程状态机设计</a></h2>
-    <time>2026-08-07</time>
-    <div class="excerpt">
-      前几篇写了功能原型、技术方案、用户调研。现在到了最硬核的部分——组局的业务流程状态机。
-一个产品好不好，70% 看设计，30% 看代码。但状态机写错了，产品从第一天起就是错的。
-这篇文章我打算讲透：一个组局从”我想打场球”到”打完球各回各家”，中间经历了哪些状态，状态之间怎么跳转，跳转的触发条件是什么，以及 30 多个边角case怎么处理。
-一、为什么状态机是这个产品最难的部分社交产品的状态...
-    </div>
-  </article>
-
-  <article>
-    <h2><a href="/blogs/2026/08/07/sports-social-app-user-research-validation/">验证产品之前，先验证需求：运动社交 App 的用户调研指南</a></h2>
-    <time>2026-08-07</time>
-    <div class="excerpt">
-      前几篇写了产品思路、功能原型、技术方案。但在你动手之前，有一件事比任何代码都重要：验证需求是真的存在，而不是你脑补出来的。
-这篇文章是一份可以直接拿去用的用户调研指南。
-一、为什么要做用户调研因为你现在做的所有设计——功能、流程、技术选型——都是基于一个假设：
-
-“失业的人需要约人打球钓鱼”
-
-这个假设可能是对的，也可能不对。在写一行代码之前，你应该去验证它。
-而且不止验证这一个假设。下面这...
-    </div>
-  </article>
-
-  <article>
-    <h2><a href="/blogs/2026/08/07/sports-social-app-technical-architecture/">运动社交 App 技术选型方案</a></h2>
-    <time>2026-08-07</time>
-    <div class="excerpt">
-      上一篇把功能拆清楚了。这一篇说技术——用什么堆出来，怎么部署，成本多少。
-如果你不是开发者，可以跳着看，重点看”为什么这么选”和”要花多少钱”。
-一、整体技术栈决策这个产品不是高并发、高实时性产品。它的特征：
-
-用户量级：MVP 阶段 1000-5000 活跃用户
-并发特征：组局时间集中在下午&#x2F;晚上&#x2F;周末，非 7×24 小时
-实时需求：低（通知用推送，不需要 WebSoc...
-    </div>
-  </article>
-
-  <article>
-    <h2><a href="/blogs/2026/08/07/sports-social-app-mvp-feature-prototype/">运动社交 App MVP 功能原型设计</a></h2>
-    <time>2026-08-07</time>
-    <div class="excerpt">
-      上一篇我写了这个产品的基本思路。这一篇，我来把它拆成可以动手做的事。
-不做 PPT，不做概念图。直接写功能清单、优先级、用户流程、界面描述——这些东西你可以直接拿去跟前端&#x2F;后端对需求。
-一、产品定位再确认先说清楚这个产品不是做什么的：
-
-不是一个”朋友圈”——不要做发帖、点赞、评论
-不是一个”交友平台”——不要做左滑右滑、匹配
-不是一个”找工作的 App”——不要在首页放招聘入口
-...
-    </div>
-  </article>
-
 
 
   <nav class="pagination">
-    <span class="page-number current">1</span><a class="page-number" href="/blogs/page/2/">2</a><a class="page-number" href="/blogs/page/3/">3</a><span class="space">&hellip;</span><a class="page-number" href="/blogs/page/5/">5</a><a class="extend next" rel="next" href="/blogs/page/2/">下一页 →</a>
+    <span class="page-number current">1</span><a class="page-number" href="/blogs/page/2/">2</a><a class="page-number" href="/blogs/page/3/">3</a><span class="space">&hellip;</span><a class="page-number" href="/blogs/page/6/">6</a><a class="extend next" rel="next" href="/blogs/page/2/">下一页 →</a>
   </nav>
 
   </main>

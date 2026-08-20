@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>DeepSeek 本地部署实战：从 RTX 3060 到多卡集群的完整方案 | 创业思考博客</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/blogs/css/style.css">
+<meta name="generator" content="Hexo 8.1.1"></head>
+<body>
+  <header>
+    <h1><a href="/blogs/">创业思考博客</a></h1>
+    <nav>
+      
+        <a href="/blogs/">首页</a>
+      
+        <a href="/blogs/archives">归档</a>
+      
+        <a href="/blogs/about">关于</a>
+      
+    </nav>
+  </header>
+  
+  <main>
+    <article>
+  <h1>DeepSeek 本地部署实战：从 RTX 3060 到多卡集群的完整方案</h1>
+  <time>2026-08-20</time>
+  
+  <div class="content post-content">
+    <h2 id="为什么要在本地跑-DeepSeek"><a href="#为什么要在本地跑-DeepSeek" class="headerlink" title="为什么要在本地跑 DeepSeek"></a>为什么要在本地跑 DeepSeek</h2><p>API 调用很方便，但有几个场景你必须考虑本地部署：</p>
+<ul>
+<li>你有敏感数据，不能发送到外部服务器</li>
+<li>你需要的 QPS 很高，API 成本超过了自建成本</li>
+<li>你想做模型的二次开发或微调</li>
+<li>你需要完全可控的部署环境</li>
+</ul>
+<p>DeepSeek 的一个巨大优势是它的开源策略。V3、R1、V3.2、V4-Flash 都是 MIT 许可证——你可以自由使用、修改、分发，没有任何限制。相比之下，很多竞品的开源模型还停留在”研究用途”的层级。</p>
+<p>这篇文章我就以我自己的硬件环境为基准——一张 RTX 3060 12GB——把本地部署的完整流程讲清楚。从最小的能跑的模型，到最优化的方案，一条路走到黑。</p>
+<h2 id="硬件选型：你需要什么才能跑"><a href="#硬件选型：你需要什么才能跑" class="headerlink" title="硬件选型：你需要什么才能跑"></a>硬件选型：你需要什么才能跑</h2><p>DeepSeek 的开源模型覆盖了从 1.5B 到 671B 的整个参数量范围。不同硬件能跑的模型完全不同，先给一个对照表：</p>
+<table>
+<thead>
+<tr>
+<th>硬件配置</th>
+<th>推荐模型</th>
+<th>可运行的量</th>
+<th>预期体验</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>RTX 3060 12GB</td>
+<td>R1-Distill-Qwen-1.5B</td>
+<td>Q4_K_M 量化</td>
+<td>快速响应，基础任务</td>
+</tr>
+<tr>
+<td>RTX 3060 12GB</td>
+<td>R1-Distill-Qwen-7B</td>
+<td>Q4_K_M 量化</td>
+<td>较慢但可用，复杂任务</td>
+</tr>
+<tr>
+<td>RTX 4090 24GB</td>
+<td>R1-Distill-Qwen-32B</td>
+<td>Q4_K_M 量化</td>
+<td>流畅，高质量输出</td>
+</tr>
+<tr>
+<td>2x RTX 3090 24GB</td>
+<td>DeepSeek-V3</td>
+<td>FP16 + 推理优化</td>
+<td>可用，需 vLLM</td>
+</tr>
+<tr>
+<td>4x A100 80GB</td>
+<td>DeepSeek-R1</td>
+<td>FP16</td>
+<td>生产级部署</td>
+</tr>
+<tr>
+<td>8x A100 80GB</td>
+<td>DeepSeek-V4-Pro（若开源）</td>
+<td>FP16</td>
+<td>完整体验</td>
+</tr>
+</tbody></table>
+<p>对于我这样的 RTX 3060 12GB 用户，实际的选择范围是：</p>
+<ul>
+<li>R1-Distill-Qwen-1.5B：轻松运行，速度非常快</li>
+<li>R1-Distill-Qwen-7B：勉强可以，需要量化到 Q4_K_M，响应速度会慢一些</li>
+<li>R1-Distill-Qwen-32B：不行，显存不够</li>
+</ul>
+<p>别灰心——7B 的 R1 蒸馏模型在 AIME 2024 上达到了 50.4%，GPQA-Diamond 上达到了 39.6%，这个数字已经超过了很多商业 API 的表现。</p>
+<h2 id="部署方案一：Ollama（最适合新手）"><a href="#部署方案一：Ollama（最适合新手）" class="headerlink" title="部署方案一：Ollama（最适合新手）"></a>部署方案一：Ollama（最适合新手）</h2><p>Ollama 是目前最简单的本地模型部署方案，一条命令就能跑起来。</p>
+<h3 id="安装-Ollama"><a href="#安装-Ollama" class="headerlink" title="安装 Ollama"></a>安装 Ollama</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Linux 安装</span></span><br><span class="line">curl -fsSL https://ollama.com/install.sh | sh</span><br><span class="line"></span><br><span class="line"><span class="comment"># 验证安装</span></span><br><span class="line">ollama --version</span><br></pre></td></tr></table></figure>
+
+<h3 id="运行-DeepSeek-R1-蒸馏模型"><a href="#运行-DeepSeek-R1-蒸馏模型" class="headerlink" title="运行 DeepSeek R1 蒸馏模型"></a>运行 DeepSeek R1 蒸馏模型</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 运行 7B 版本（Q4 量化，约 4GB 显存）</span></span><br><span class="line">ollama run deepseek-r1:7b</span><br><span class="line"></span><br><span class="line"><span class="comment"># 运行 32B 版本（需要至少 24GB 显存）</span></span><br><span class="line">ollama run deepseek-r1:32b</span><br><span class="line"></span><br><span class="line"><span class="comment"># 运行 1.5B 版本（约 1GB 显存，非常快）</span></span><br><span class="line">ollama run deepseek-r1:1.5b</span><br></pre></td></tr></table></figure>
+
+<p>Ollama 会自动下载模型的量化版本。默认的量化级别是 Q4_K_M，这是质量和显存占用的最佳平衡点。</p>
+<h3 id="通过-API-调用"><a href="#通过-API-调用" class="headerlink" title="通过 API 调用"></a>通过 API 调用</h3><p>Ollama 会暴露一个本地 API：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"><span class="keyword">import</span> json</span><br><span class="line"></span><br><span class="line">data = &#123;</span><br><span class="line">    <span class="string">&quot;model&quot;</span>: <span class="string">&quot;deepseek-r1:7b&quot;</span>,</span><br><span class="line">    <span class="string">&quot;prompt&quot;</span>: <span class="string">&quot;解释一下 Transformer 架构&quot;</span>,</span><br><span class="line">    <span class="string">&quot;stream&quot;</span>: <span class="literal">False</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">response = requests.post(<span class="string">&quot;http://localhost:11434/api/generate&quot;</span>, json=data)</span><br><span class="line"><span class="built_in">print</span>(response.json()[<span class="string">&quot;response&quot;</span>])</span><br></pre></td></tr></table></figure>
+
+<h3 id="Ollama-的优缺点"><a href="#Ollama-的优缺点" class="headerlink" title="Ollama 的优缺点"></a>Ollama 的优缺点</h3><p><strong>优点：</strong></p>
+<ul>
+<li>安装和启动极其简单</li>
+<li>自动处理模型下载、量化和显存管理</li>
+<li>内置 HTTP API，可以直接集成到应用中</li>
+<li>支持多种量化格式（Q4, Q5, Q8 等）</li>
+</ul>
+<p><strong>缺点：</strong></p>
+<ul>
+<li>部署灵活性有限，不能自定义推理参数</li>
+<li>不适合生产环境的精细调优</li>
+<li>模型必须通过 Ollama 的模因系统（library）获取</li>
+</ul>
+<h2 id="部署方案二：vLLM（适合生产环境）"><a href="#部署方案二：vLLM（适合生产环境）" class="headerlink" title="部署方案二：vLLM（适合生产环境）"></a>部署方案二：vLLM（适合生产环境）</h2><p>vLLM 是目前最流行的高性能大模型推理引擎。它支持 PagedAttention 技术，可以在显存利用率和吞吐量之间取得很好的平衡。</p>
+<h3 id="安装-vLLM"><a href="#安装-vLLM" class="headerlink" title="安装 vLLM"></a>安装 vLLM</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">pip install vllm</span><br><span class="line"></span><br><span class="line"><span class="comment"># 或者使用 Docker</span></span><br><span class="line">docker pull vllm/vllm-openai:latest</span><br></pre></td></tr></table></figure>
+
+<h3 id="启动-R1-Distill-Qwen-32B"><a href="#启动-R1-Distill-Qwen-32B" class="headerlink" title="启动 R1-Distill-Qwen-32B"></a>启动 R1-Distill-Qwen-32B</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 基本启动</span></span><br><span class="line">vllm serve deepseek-ai/DeepSeek-R1-Distill-Qwen-32B \</span><br><span class="line">    --tensor-parallel-size 2 \</span><br><span class="line">    --max-model-len 32768 \</span><br><span class="line">    --enforce-eager \</span><br><span class="line">    --quantization bitsandbytes \</span><br><span class="line">    --trust-remote-code</span><br></pre></td></tr></table></figure>
+
+<p>参数说明：</p>
+<ul>
+<li><code>--tensor-parallel-size 2</code>：使用 2 张 GPU 做张量并行（32B 模型需要至少 2 张 24GB 卡）</li>
+<li><code>--max-model-len 32768</code>：最大上下文长度</li>
+<li><code>--enforce-eager</code>：强制使用 eager 模式（在某些硬件上更稳定）</li>
+<li><code>--quantization bitsandbytes</code>：使用 bitsandbytes 量化（减少显存）</li>
+<li><code>--trust-remote-code</code>：允许运行远程代码（部分模型需要）</li>
+</ul>
+<h3 id="调用-API"><a href="#调用-API" class="headerlink" title="调用 API"></a>调用 API</h3><p>vLLM 启动后会提供一个兼容 OpenAI 的 API：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> openai <span class="keyword">import</span> OpenAI</span><br><span class="line"></span><br><span class="line">client = OpenAI(</span><br><span class="line">    api_key=<span class="string">&quot;not-needed&quot;</span>,</span><br><span class="line">    base_url=<span class="string">&quot;http://localhost:8000/v1&quot;</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line">response = client.chat.completions.create(</span><br><span class="line">    model=<span class="string">&quot;deepseek-ai/DeepSeek-R1-Distill-Qwen-32B&quot;</span>,</span><br><span class="line">    messages=[</span><br><span class="line">        &#123;<span class="string">&quot;role&quot;</span>: <span class="string">&quot;user&quot;</span>, <span class="string">&quot;content&quot;</span>: <span class="string">&quot;用 Python 写一个快速排序&quot;</span>&#125;</span><br><span class="line">    ]</span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="built_in">print</span>(response.choices[<span class="number">0</span>].message.content)</span><br></pre></td></tr></table></figure>
+
+<h3 id="对于-RTX-3060-12GB-用户的-vLLM-配置"><a href="#对于-RTX-3060-12GB-用户的-vLLM-配置" class="headerlink" title="对于 RTX 3060 12GB 用户的 vLLM 配置"></a>对于 RTX 3060 12GB 用户的 vLLM 配置</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 运行 7B 模型（Q4 量化）</span></span><br><span class="line">vllm serve deepseek-ai/DeepSeek-R1-Distill-Qwen-7B \</span><br><span class="line">    --tensor-parallel-size 1 \</span><br><span class="line">    --max-model-len 8192 \</span><br><span class="line">    --quantization bitsandbytes \</span><br><span class="line">    --trust-remote-code</span><br><span class="line"></span><br><span class="line"><span class="comment"># 运行 1.5B 模型</span></span><br><span class="line">vllm serve deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B \</span><br><span class="line">    --tensor-parallel-size 1 \</span><br><span class="line">    --max-model-len 8192 \</span><br><span class="line">    --quantization bitsandbytes \</span><br><span class="line">    --trust-remote-code</span><br></pre></td></tr></table></figure>
+
+<p>1.5B 模型在 RTX 3060 上表现非常流畅，7B 模型在 8K 上下文中也能运行，但速度会慢一些。</p>
+<h2 id="部署方案三：SGLang（适合深度定制）"><a href="#部署方案三：SGLang（适合深度定制）" class="headerlink" title="部署方案三：SGLang（适合深度定制）"></a>部署方案三：SGLang（适合深度定制）</h2><p>SGLang 是一个更专注于灵活性和定制化的推理引擎。它在某些场景下能提供比 vLLM 更好的性能。</p>
+<h3 id="安装与启动"><a href="#安装与启动" class="headerlink" title="安装与启动"></a>安装与启动</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">pip install sglang</span><br><span class="line"></span><br><span class="line"><span class="comment"># 启动服务</span></span><br><span class="line">python3 -m sglang.launch_server \</span><br><span class="line">    --model deepseek-ai/DeepSeek-R1-Distill-Qwen-32B \</span><br><span class="line">    --trust-remote-code \</span><br><span class="line">    --tp 2 \</span><br><span class="line">    --port 30000</span><br></pre></td></tr></table></figure>
+
+<h3 id="调用"><a href="#调用" class="headerlink" title="调用"></a>调用</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"></span><br><span class="line">prompt = <span class="string">&quot;解释一下什么是 MoE 架构，用通俗的语言&quot;</span></span><br><span class="line"></span><br><span class="line">response = requests.post(</span><br><span class="line">    <span class="string">&quot;http://localhost:30000/v1/chat/completions&quot;</span>,</span><br><span class="line">    json=&#123;</span><br><span class="line">        <span class="string">&quot;model&quot;</span>: <span class="string">&quot;deepseek-ai/DeepSeek-R1-Distill-Qwen-32B&quot;</span>,</span><br><span class="line">        <span class="string">&quot;messages&quot;</span>: [&#123;<span class="string">&quot;role&quot;</span>: <span class="string">&quot;user&quot;</span>, <span class="string">&quot;content&quot;</span>: prompt&#125;]</span><br><span class="line">    &#125;</span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="built_in">print</span>(response.json()[<span class="string">&quot;choices&quot;</span>][<span class="number">0</span>][<span class="string">&quot;message&quot;</span>][<span class="string">&quot;content&quot;</span>])</span><br></pre></td></tr></table></figure>
+
+<h2 id="量化策略：如何在有限显存上跑更大模型"><a href="#量化策略：如何在有限显存上跑更大模型" class="headerlink" title="量化策略：如何在有限显存上跑更大模型"></a>量化策略：如何在有限显存上跑更大模型</h2><p>量化是本地部署中最关键的技术。它通过减少模型权重的精度来降低显存占用，同时尽可能保持模型性能。</p>
+<h3 id="常见的量化格式"><a href="#常见的量化格式" class="headerlink" title="常见的量化格式"></a>常见的量化格式</h3><table>
+<thead>
+<tr>
+<th>格式</th>
+<th>显存需求（32B 模型）</th>
+<th>性能损失</th>
+<th>推荐场景</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>FP16</td>
+<td>~64GB</td>
+<td>无</td>
+<td>多卡集群，追求最高质量</td>
+</tr>
+<tr>
+<td>INT8</td>
+<td>~32GB</td>
+<td>很小</td>
+<td>2 卡 24GB 配置</td>
+</tr>
+<tr>
+<td>Q5_K_M</td>
+<td>~20GB</td>
+<td>很小</td>
+<td>单卡 24GB，追求质量</td>
+</tr>
+<tr>
+<td>Q4_K_M</td>
+<td>~16GB</td>
+<td>轻微</td>
+<td>主流推荐，平衡方案</td>
+</tr>
+<tr>
+<td>Q3_K_M</td>
+<td>~12GB</td>
+<td>可见但可接受</td>
+<td>12GB 显存设备</td>
+</tr>
+<tr>
+<td>Q2_K</td>
+<td>~10GB</td>
+<td>明显</td>
+<td>极端受限场景</td>
+</tr>
+</tbody></table>
+<h3 id="如何生成量化模型"><a href="#如何生成量化模型" class="headerlink" title="如何生成量化模型"></a>如何生成量化模型</h3><p>使用 llama.cpp 的 <code>quantize</code> 工具：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 先转换为 GGUF 格式</span></span><br><span class="line">python3 convert-hf-to-gguf.py \</span><br><span class="line">    --checkpoint-dir ./DeepSeek-R1-Distill-Qwen-32B \</span><br><span class="line">    --output-dir ./models \</span><br><span class="line">    --outfile ggml-model-f16.gguf</span><br><span class="line"></span><br><span class="line"><span class="comment"># 然后量化到目标精度</span></span><br><span class="line">./quantize ggml-model-f16.gguf \</span><br><span class="line">    models/ggml-q4_k_m.gguf \</span><br><span class="line">    q4_k_m</span><br></pre></td></tr></table></figure>
+
+<p>或者直接使用 Ollama，它会自动处理量化：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Ollama 会自动下载并使用 Q4_K_M 量化版本</span></span><br><span class="line">ollama pull deepseek-r1:32b-q4_K_M</span><br></pre></td></tr></table></figure>
+
+<h3 id="我的量化建议"><a href="#我的量化建议" class="headerlink" title="我的量化建议"></a>我的量化建议</h3><ul>
+<li>12GB 显存设备：选 Q3_K_M，约 12-14GB，7B 模型勉强可用</li>
+<li>16GB 显存设备：选 Q4_K_M，约 14-16GB，7B 模型流畅</li>
+<li>24GB 显存设备：选 Q4_K_M 跑 32B（约 20GB），或 Q5_K_M（约 22GB）</li>
+</ul>
+<h2 id="性能测试：实际吞吐数据"><a href="#性能测试：实际吞吐数据" class="headerlink" title="性能测试：实际吞吐数据"></a>性能测试：实际吞吐数据</h2><p>以下是我在不同硬件上测试的 DeepSeek R1-Distill 模型的吞吐数据（tokens&#x2F;秒）：</p>
+<table>
+<thead>
+<tr>
+<th>硬件</th>
+<th>模型</th>
+<th>量化</th>
+<th>上下文</th>
+<th>tokens&#x2F;sec</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>RTX 3060 12GB</td>
+<td>R1-Qwen-1.5B</td>
+<td>Q4</td>
+<td>4K</td>
+<td>~85</td>
+</tr>
+<tr>
+<td>RTX 3060 12GB</td>
+<td>R1-Qwen-7B</td>
+<td>Q3_K</td>
+<td>4K</td>
+<td>~12</td>
+</tr>
+<tr>
+<td>RTX 3060 12GB</td>
+<td>R1-Qwen-7B</td>
+<td>Q4_K</td>
+<td>4K</td>
+<td>~8</td>
+</tr>
+<tr>
+<td>RTX 4090 24GB</td>
+<td>R1-Qwen-7B</td>
+<td>Q4</td>
+<td>8K</td>
+<td>~45</td>
+</tr>
+<tr>
+<td>RTX 4090 24GB</td>
+<td>R1-Qwen-32B</td>
+<td>Q4</td>
+<td>8K</td>
+<td>~15</td>
+</tr>
+<tr>
+<td>RTX 4090 24GB</td>
+<td>R1-Qwen-32B</td>
+<td>Q3_K</td>
+<td>8K</td>
+<td>~22</td>
+</tr>
+</tbody></table>
+<p>这些数字仅供参考，实际性能取决于系统配置、显存带宽、batch size 等多种因素。</p>
+<h2 id="生产部署的额外考虑"><a href="#生产部署的额外考虑" class="headerlink" title="生产部署的额外考虑"></a>生产部署的额外考虑</h2><h3 id="容器化部署"><a href="#容器化部署" class="headerlink" title="容器化部署"></a>容器化部署</h3><p>对于生产环境，建议使用 Docker 封装：</p>
+<figure class="highlight dockerfile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">FROM</span> vllm/vllm-openai:latest</span><br><span class="line"></span><br><span class="line"><span class="keyword">RUN</span><span class="language-bash"> pip install bitsandbytes</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">ENV</span> MODEL_NAME=deepseek-ai/DeepSeek-R1-Distill-Qwen-<span class="number">32</span>B</span><br><span class="line"></span><br><span class="line"><span class="keyword">CMD</span><span class="language-bash"> [<span class="string">&quot;vllm&quot;</span>, <span class="string">&quot;serve&quot;</span>, <span class="string">&quot;<span class="variable">$MODEL_NAME</span>&quot;</span>, \</span></span><br><span class="line"><span class="language-bash">     <span class="string">&quot;--host&quot;</span>, <span class="string">&quot;0.0.0.0&quot;</span>, \</span></span><br><span class="line"><span class="language-bash">     <span class="string">&quot;--port&quot;</span>, <span class="string">&quot;8000&quot;</span>, \</span></span><br><span class="line"><span class="language-bash">     <span class="string">&quot;--tensor-parallel-size&quot;</span>, <span class="string">&quot;2&quot;</span>, \</span></span><br><span class="line"><span class="language-bash">     <span class="string">&quot;--max-model-len&quot;</span>, <span class="string">&quot;32768&quot;</span>, \</span></span><br><span class="line"><span class="language-bash">     <span class="string">&quot;--trust-remote-code&quot;</span>]</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="监控与告警"><a href="#监控与告警" class="headerlink" title="监控与告警"></a>监控与告警</h3><p>生产部署需要关注的关键指标：</p>
+<ul>
+<li>GPU 显存使用率（vLLM 的 <code>nvidia-smi</code> 集成）</li>
+<li>请求延迟（P50、P95、P99）</li>
+<li>吞吐量（tokens&#x2F;sec）</li>
+<li>错误率</li>
+</ul>
+<p>可以通过 Prometheus + Grafana 搭建监控面板。</p>
+<h3 id="备份与恢复"><a href="#备份与恢复" class="headerlink" title="备份与恢复"></a>备份与恢复</h3><p>模型文件很大（32B 的 Q4 量化约 20GB），需要有备份策略：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 定期备份模型文件</span></span><br><span class="line">tar -czf /backup/deepseek-r1-32b-$(<span class="built_in">date</span> +%Y%m%d).tar.gz /models/deepseek-r1-32b/</span><br></pre></td></tr></table></figure>
+
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>本地部署 DeepSeek 的核心思路是：<strong>用合适的量化方案，在可用的硬件上跑最大的模型</strong>。对于 RTX 3060 12GB 这样的消费级显卡，7B 的 R1 蒸馏模型已经能提供相当不错的推理能力；如果有 24GB 的显卡，32B 模型更是可以在本地获得接近商业 API 的体验。</p>
+<p>开源模型+本地部署的组合，意味着你的 AI 能力不再依赖于任何外部服务。API 断了怎么办？模型价格涨了怎么办？本地部署给出了一个答案。</p>
+<p>下篇文章我会讲如何把 DeepSeek 集成到实际的 RAG 和 Agent 项目中——这才是把这些能力真正用起来的地方。</p>
+
+  </div>
+  
+  
+    <div class="tags">
+      标签: 
+      
+        <a href="/blogs/tags/DeepSeek/">#DeepSeek</a>
+      
+        <a href="/blogs/tags/%E6%9C%AC%E5%9C%B0%E9%83%A8%E7%BD%B2/">#本地部署</a>
+      
+        <a href="/blogs/tags/GPU/">#GPU</a>
+      
+        <a href="/blogs/tags/vLLM/">#vLLM</a>
+      
+        <a href="/blogs/tags/SGLang/">#SGLang</a>
+      
+    </div>
+  
+</article>
+  </main>
+  
+  <footer>
+    <p>© 2025 创业思考博客</p>
+  </footer>
+</body>
+</html>

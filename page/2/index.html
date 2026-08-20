@@ -27,6 +27,79 @@
   <main>
     
   <article>
+    <h2><a href="/blogs/2026/08/11/grill-me-learning/">Grill-Me：让 AI Agent 学会先&#39;拷问&#39;再动手</a></h2>
+    <time>2026-08-11</time>
+    <div class="excerpt">
+      
+一、一个让人血压升高的 AI 对话你可能经历过这样的场景：
+
+你：”帮我把这个函数的性能优化一下。”AI：[花了 30 秒生成了一段代码，改了你根本不想改的部分，用了你根本不想要的库]
+
+或者更糟的：
+
+你：”重构一下这个模块。”AI：[删掉了你花了三周写的业务逻辑，替换成了”更优雅”的三行代码，编译都过不了]
+
+这个问题的根源是什么？不是 AI 不够聪明，而是 AI 太急于执行。
+大语言...
+    </div>
+  </article>
+
+  <article>
+    <h2><a href="/blogs/2026/08/07/sports-social-app-state-machine-design/">运动社交 App 组局业务流程状态机设计</a></h2>
+    <time>2026-08-07</time>
+    <div class="excerpt">
+      前几篇写了功能原型、技术方案、用户调研。现在到了最硬核的部分——组局的业务流程状态机。
+一个产品好不好，70% 看设计，30% 看代码。但状态机写错了，产品从第一天起就是错的。
+这篇文章我打算讲透：一个组局从”我想打场球”到”打完球各回各家”，中间经历了哪些状态，状态之间怎么跳转，跳转的触发条件是什么，以及 30 多个边角case怎么处理。
+一、为什么状态机是这个产品最难的部分社交产品的状态...
+    </div>
+  </article>
+
+  <article>
+    <h2><a href="/blogs/2026/08/07/sports-social-app-user-research-validation/">验证产品之前，先验证需求：运动社交 App 的用户调研指南</a></h2>
+    <time>2026-08-07</time>
+    <div class="excerpt">
+      前几篇写了产品思路、功能原型、技术方案。但在你动手之前，有一件事比任何代码都重要：验证需求是真的存在，而不是你脑补出来的。
+这篇文章是一份可以直接拿去用的用户调研指南。
+一、为什么要做用户调研因为你现在做的所有设计——功能、流程、技术选型——都是基于一个假设：
+
+“失业的人需要约人打球钓鱼”
+
+这个假设可能是对的，也可能不对。在写一行代码之前，你应该去验证它。
+而且不止验证这一个假设。下面这...
+    </div>
+  </article>
+
+  <article>
+    <h2><a href="/blogs/2026/08/07/sports-social-app-technical-architecture/">运动社交 App 技术选型方案</a></h2>
+    <time>2026-08-07</time>
+    <div class="excerpt">
+      上一篇把功能拆清楚了。这一篇说技术——用什么堆出来，怎么部署，成本多少。
+如果你不是开发者，可以跳着看，重点看”为什么这么选”和”要花多少钱”。
+一、整体技术栈决策这个产品不是高并发、高实时性产品。它的特征：
+
+用户量级：MVP 阶段 1000-5000 活跃用户
+并发特征：组局时间集中在下午&#x2F;晚上&#x2F;周末，非 7×24 小时
+实时需求：低（通知用推送，不需要 WebSoc...
+    </div>
+  </article>
+
+  <article>
+    <h2><a href="/blogs/2026/08/07/sports-social-app-mvp-feature-prototype/">运动社交 App MVP 功能原型设计</a></h2>
+    <time>2026-08-07</time>
+    <div class="excerpt">
+      上一篇我写了这个产品的基本思路。这一篇，我来把它拆成可以动手做的事。
+不做 PPT，不做概念图。直接写功能清单、优先级、用户流程、界面描述——这些东西你可以直接拿去跟前端&#x2F;后端对需求。
+一、产品定位再确认先说清楚这个产品不是做什么的：
+
+不是一个”朋友圈”——不要做发帖、点赞、评论
+不是一个”交友平台”——不要做左滑右滑、匹配
+不是一个”找工作的 App”——不要在首页放招聘入口
+...
+    </div>
+  </article>
+
+  <article>
     <h2><a href="/blogs/2026/08/07/beijing-programmer-unemployment-ai-video-vlog-2026/">北漂程序员失业半年：100万存款、AI视频与第二次开局</a></h2>
     <time>2026-08-07</time>
     <div class="excerpt">
@@ -85,71 +158,10 @@
     </div>
   </article>
 
-  <article>
-    <h2><a href="/blogs/2026/08/07/social-app-for-the-unemployed-true-need-or-fake-problem/">做一个&#34;失业群体交友软件&#34;，是真需求还是伪命题？</a></h2>
-    <time>2026-08-07</time>
-    <div class="excerpt">
-      有人跟我聊到一个想法：做一个专门面向失业群体的交友软件。
-“这些人需要抱团取暖，需要心理支持，需要找工作，需要一个社区。现在市面上没有这样的产品。”
-这个逻辑听起来很顺，但越是顺的逻辑，越值得停下来想一想。
-一、需求是真实的，但”做产品”是另一回事失业群体的核心痛点是什么？
-
-找不到工作（经济压力）
-自我价值感下降（心理问题）
-社交圈萎缩（隔离感）
-对未来不确定（焦虑）
-
-这些痛点真实存在，...
-    </div>
-  </article>
-
-  <article>
-    <h2><a href="/blogs/2026/08/07/wechat-mini-program-mall-business-analysis-2026/">做微信小程序商城到底值不值得？2026 年一个开发者的冷思考</a></h2>
-    <time>2026-08-07</time>
-    <div class="excerpt">
-      最近有人问我：”做微信小程序商城，能不能赚钱？”
-我沉默了几秒，然后开始分析。因为这个问题背后其实有三个问题：商城本身赚钱吗？做一个能赚？做给别人的能赚？
-答案完全不同。
-一、先拆解”微信小程序商城”到底是什么“做微信小程序商城”这句话太宽了，它至少包含四种完全不同的商业形态：
-形态一：自己开店卖货
-你有个产品、有货源、有供应链，开个小程序作为销售渠道，代替淘宝店或线下门店。这是最常见的玩法...
-    </div>
-  </article>
-
-  <article>
-    <h2><a href="/blogs/2026/08/07/from-comfyui-to-final-ai-video-production-pipeline/">从 ComfyUI 到成片：AI 视频制作的完整本地工作流</a></h2>
-    <time>2026-08-07</time>
-    <div class="excerpt">
-      用 AI 生成视频这件事，最近半年已经从”能不能做”变成了”怎么做出来”。但很多人在 ComfyUI 里跑出一个视频片段后，就不知道下一步该干嘛了——那一段 4 秒、480p、8fps 的东西，和真正能发出去的产品之间，还隔着很长的一段路。
-这篇文章就来讲清楚这条完整链路：从 ComfyUI 生成第一帧，到最终发布到抖音、B 站、小红书上的成片，每一步该做什么、用什么工具、为什么这么做。
-全...
-    </div>
-  </article>
-
-  <article>
-    <h2><a href="/blogs/2026/08/07/%E5%A4%B1%E4%B8%9A%E4%B9%8B%E5%90%8E%E4%BD%A0%E5%BF%85%E9%A1%BB%E9%87%8D%E6%96%B0%E6%88%90%E4%B8%BA%E4%B8%80%E4%B8%AA%E4%BA%BA/">失业之后，你必须重新成为一个人</a></h2>
-    <time>2026-08-07</time>
-    <div class="excerpt">
-      上周跟一个老朋友吃饭。他在大厂，P8，去年被裁了。吃饭的时候他说了一句话，让我想了很久——“你知道吗，失业之后最大的痛苦不是没钱，是你不知道自己是干什么的。”
-这句话太普通了，普通到我们每天都在说类似的话。但它背后藏着一个几乎没有人认真讨论过的问题。
-这篇文章不是教你怎么投简历、怎么省钱、怎么转型。这些是战术，今天想聊的是战略层的东西：当工作这个身份被剥掉之后，你如何重新定义”你是谁”？
-一...
-    </div>
-  </article>
-
-  <article>
-    <h2><a href="/blogs/2026/07/20/ai-burnout-workload-creep/">AI没有节省时间，反而制造了一种新型倦怠</a></h2>
-    <time>2026-07-20</time>
-    <div class="excerpt">
-      最近读到一篇发表在《哈佛商业评论》上的研究，数据来自UC伯克利和耶鲁大学，结论让很多职场人感到既意外又熟悉：AI工具并没有减少工作量，反而加剧了工作强度。
-这项研究在一家200人的科技公司进行了八个月的嵌入式调研，员工自愿采用AI工具。结果揭示了一种研究者称之为”工作量蠕变”（workload creep）的现象——AI让工作变得更简单，于是人们做了更多工作，而这反过来又让他们更依赖AI去简...
-    </div>
-  </article>
-
 
 
   <nav class="pagination">
-    <a class="extend prev" rel="prev" href="/blogs/">← 上一页</a><a class="page-number" href="/blogs/">1</a><span class="page-number current">2</span><a class="page-number" href="/blogs/page/3/">3</a><a class="page-number" href="/blogs/page/4/">4</a><a class="page-number" href="/blogs/page/5/">5</a><a class="extend next" rel="next" href="/blogs/page/3/">下一页 →</a>
+    <a class="extend prev" rel="prev" href="/blogs/">← 上一页</a><a class="page-number" href="/blogs/">1</a><span class="page-number current">2</span><a class="page-number" href="/blogs/page/3/">3</a><a class="page-number" href="/blogs/page/4/">4</a><span class="space">&hellip;</span><a class="page-number" href="/blogs/page/6/">6</a><a class="extend next" rel="next" href="/blogs/page/3/">下一页 →</a>
   </nav>
 
   </main>

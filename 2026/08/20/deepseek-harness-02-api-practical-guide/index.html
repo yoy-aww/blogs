@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>DeepSeek 开发者实战：API 调用、思考模式与成本优化 | 创业思考博客</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/blogs/css/style.css">
+<meta name="generator" content="Hexo 8.1.1"></head>
+<body>
+  <header>
+    <h1><a href="/blogs/">创业思考博客</a></h1>
+    <nav>
+      
+        <a href="/blogs/">首页</a>
+      
+        <a href="/blogs/archives">归档</a>
+      
+        <a href="/blogs/about">关于</a>
+      
+    </nav>
+  </header>
+  
+  <main>
+    <article>
+  <h1>DeepSeek 开发者实战：API 调用、思考模式与成本优化</h1>
+  <time>2026-08-20</time>
+  
+  <div class="content post-content">
+    <h2 id="一个真实的困扰"><a href="#一个真实的困扰" class="headerlink" title="一个真实的困扰"></a>一个真实的困扰</h2><p>上周我在给朋友调试一个 DeepSeek API 的调用时，他困惑地问我：”为什么我用了 V4-Pro 反而比 V4-Flash 慢了好几倍，而且输出还特别长？”</p>
+<p>我一看他的代码——他开启了两层”思考”：API 层面的 <code>enable_thinking: true</code>，又在 prompt 里写了”请逐步推理并解释你的思考过程”。结果是模型先在内部做了长时间的 reasoning，然后又用自然语言把这些 reasoning 全部吐了出来。</p>
+<p>这个场景非常典型。很多开发者开始使用 DeepSeek 的时候，最大的问题不是不会调用 API，而是”不会正确地调用”。这篇文章我就从实际开发的视角，把 DeepSeek API 的关键点、思考模式的使用、成本优化策略全部讲透。</p>
+<h2 id="环境准备与快速上手"><a href="#环境准备与快速上手" class="headerlink" title="环境准备与快速上手"></a>环境准备与快速上手</h2><h3 id="API-Key-获取"><a href="#API-Key-获取" class="headerlink" title="API Key 获取"></a>API Key 获取</h3><p>首先需要在 <a target="_blank" rel="noopener" href="https://platform.deepseek.com/">DeepSeek 平台</a>注册并获取 API Key。平台支持预付费充值和赠送余额，赠送余额优先扣减。</p>
+<h3 id="安装-SDK"><a href="#安装-SDK" class="headerlink" title="安装 SDK"></a>安装 SDK</h3><p>DeepSeek 的 API 完全兼容 OpenAI 格式，可以直接使用 OpenAI Python SDK：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 安装</span></span><br><span class="line">pip install openai</span><br><span class="line"></span><br><span class="line"><span class="comment"># 基本调用</span></span><br><span class="line"><span class="keyword">from</span> openai <span class="keyword">import</span> OpenAI</span><br><span class="line"></span><br><span class="line">client = OpenAI(</span><br><span class="line">    api_key=<span class="string">&quot;sk-xxxx&quot;</span>,</span><br><span class="line">    base_url=<span class="string">&quot;https://api.deepseek.com&quot;</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line">response = client.chat.completions.create(</span><br><span class="line">    model=<span class="string">&quot;deepseek-v4-flash&quot;</span>,</span><br><span class="line">    messages=[</span><br><span class="line">        &#123;<span class="string">&quot;role&quot;</span>: <span class="string">&quot;system&quot;</span>, <span class="string">&quot;content&quot;</span>: <span class="string">&quot;你是一个有用的助手&quot;</span>&#125;,</span><br><span class="line">        &#123;<span class="string">&quot;role&quot;</span>: <span class="string">&quot;user&quot;</span>, <span class="string">&quot;content&quot;</span>: <span class="string">&quot;解释一下 MoE 架构&quot;</span>&#125;</span><br><span class="line">    ]</span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="built_in">print</span>(response.choices[<span class="number">0</span>].message.content)</span><br></pre></td></tr></table></figure>
+
+<p>也可以用 curl 直接调用：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">curl https://api.deepseek.com/v1/chat/completions \</span><br><span class="line">  -H <span class="string">&quot;Content-Type: application/json&quot;</span> \</span><br><span class="line">  -H <span class="string">&quot;Authorization: Bearer sk-xxxx&quot;</span> \</span><br><span class="line">  -d <span class="string">&#x27;&#123;</span></span><br><span class="line"><span class="string">    &quot;model&quot;: &quot;deepseek-v4-flash&quot;,</span></span><br><span class="line"><span class="string">    &quot;messages&quot;: [</span></span><br><span class="line"><span class="string">      &#123;&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;解释 MoE 架构&quot;&#125;</span></span><br><span class="line"><span class="string">    ]</span></span><br><span class="line"><span class="string">  &#125;&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="模型选择：两个关键决策"><a href="#模型选择：两个关键决策" class="headerlink" title="模型选择：两个关键决策"></a>模型选择：两个关键决策</h3><p>当前 DeepSeek 提供两个主力模型 API 端点：</p>
+<table>
+<thead>
+<tr>
+<th>特性</th>
+<th>deepseek-v4-flash</th>
+<th>deepseek-v4-pro</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>模型版本</td>
+<td>V4-Flash-0731</td>
+<td>V4-Pro-0813</td>
+</tr>
+<tr>
+<td>总参数</td>
+<td>284B</td>
+<td>1.6T</td>
+</tr>
+<tr>
+<td>激活参数</td>
+<td>13B</td>
+<td>49B</td>
+</tr>
+<tr>
+<td>上下文</td>
+<td>100万 token</td>
+<td>100万 token</td>
+</tr>
+<tr>
+<td>最大输出</td>
+<td>384K token</td>
+<td>384K token</td>
+</tr>
+<tr>
+<td>并发限制</td>
+<td>2500</td>
+<td>500</td>
+</tr>
+<tr>
+<td>FIM 补全</td>
+<td>仅非思考模式</td>
+<td>仅非思考模式</td>
+</tr>
+<tr>
+<td>Anthropic API</td>
+<td>支持</td>
+<td>支持</td>
+</tr>
+</tbody></table>
+<p>我的建议是：默认先用 V4-Flash，需要更高精度的场景再升级到 V4-Pro。V4-Flash 在大多数场景下的表现已经非常好了，而价格只有 V4-Pro 的三分之一。</p>
+<h2 id="思考模式：DeepSeek-最具特色的功能"><a href="#思考模式：DeepSeek-最具特色的功能" class="headerlink" title="思考模式：DeepSeek 最具特色的功能"></a>思考模式：DeepSeek 最具特色的功能</h2><h3 id="什么是思考模式"><a href="#什么是思考模式" class="headerlink" title="什么是思考模式"></a>什么是思考模式</h3><p>DeepSeek 的 API 支持一个独特的参数——<code>enable_thinking</code>。启用后，模型会在生成最终回答之前，先进行一段内部的”推理过程”。这个过程对用户不可见（除非你特意提取），但它会显著改变输出的质量。</p>
+<h3 id="启用思考模式"><a href="#启用思考模式" class="headerlink" title="启用思考模式"></a>启用思考模式</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">response = client.chat.completions.create(</span><br><span class="line">    model=<span class="string">&quot;deepseek-v4-flash&quot;</span>,</span><br><span class="line">    messages=[</span><br><span class="line">        &#123;<span class="string">&quot;role&quot;</span>: <span class="string">&quot;user&quot;</span>, <span class="string">&quot;content&quot;</span>: <span class="string">&quot;一个 5 层的塔，每层比上一层多 3 个球，总共有多少球？&quot;</span>&#125;</span><br><span class="line">    ],</span><br><span class="line">    enable_thinking=<span class="literal">True</span>  <span class="comment"># 开启思考模式</span></span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+
+<p>返回的响应中，<code>reasoning_content</code> 字段包含模型的推理过程，<code>content</code> 字段包含最终回答：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">thinking = response.choices[<span class="number">0</span>].message.reasoning_content  <span class="comment"># 推理过程</span></span><br><span class="line">answer = response.choices[<span class="number">0</span>].message.content               <span class="comment"># 最终回答</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="什么时候该用，什么时候不该用"><a href="#什么时候该用，什么时候不该用" class="headerlink" title="什么时候该用，什么时候不该用"></a>什么时候该用，什么时候不该用</h3><p>这是很多开发者最容易搞混的地方。</p>
+<p><strong>该用思考模式的场景：</strong></p>
+<ul>
+<li>数学计算和逻辑推理</li>
+<li>代码生成和调试</li>
+<li>需要多步分析的任务</li>
+<li>开放式创意写作（需要深层构思的内容）</li>
+<li>复杂的产品分析和决策</li>
+</ul>
+<p><strong>不该用思考模式的场景：</strong></p>
+<ul>
+<li>简单的分类或提取</li>
+<li>已经结构化的文本处理</li>
+<li>翻译任务（除非是文学翻译）</li>
+<li>需要快速响应的实时场景</li>
+</ul>
+<p>一个容易记的准则：如果你不确定是否要开启，就先不开启。在大多数日常任务中，V4-Flash 的默认输出已经足够好了。</p>
+<h3 id="思考模式的双输陷阱"><a href="#思考模式的双输陷阱" class="headerlink" title="思考模式的双输陷阱"></a>思考模式的双输陷阱</h3><p>回到文章开头的那个例子。当 <code>enable_thinking=True</code> 加上 prompt 里的”请逐步推理”时，会发生什么：</p>
+<ol>
+<li>API 层面的思考模式触发模型内部推理（消耗大量 token）</li>
+<li>prompt 里的指令又让模型把推理过程”翻译”成自然语言输出</li>
+</ol>
+<p>这是双重消耗。模型不仅在内部做了完整的推理，还把这些推理完整地复述了一遍。token 消耗可能增加 5-10 倍。</p>
+<p>正确的做法是：要么用 API 层面的思考模式（模型内部推理，你不看过程只看结果），要么在 prompt 里让模型输出思考过程（适合教学、调试场景），不要同时用两者。</p>
+<h2 id="成本优化：六个实战技巧"><a href="#成本优化：六个实战技巧" class="headerlink" title="成本优化：六个实战技巧"></a>成本优化：六个实战技巧</h2><h3 id="技巧-1：善用缓存命中机制"><a href="#技巧-1：善用缓存命中机制" class="headerlink" title="技巧 1：善用缓存命中机制"></a>技巧 1：善用缓存命中机制</h3><p>DeepSeek 的 API 有一个非常有价值的缓存机制。当请求的 prompt 与之前某个请求的 prompt 高度相似时，输入部分可以享受缓存命中的价格——只有缓存未命中价格的十分之一。</p>
+<table>
+<thead>
+<tr>
+<th>模型</th>
+<th>输入（缓存未命中，高峰）</th>
+<th>输入（缓存命中，高峰）</th>
+<th>输出（高峰）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>V4-Flash</td>
+<td>3.0 元&#x2F;百万</td>
+<td>0.10 元&#x2F;百万</td>
+<td>9.0 元</td>
+</tr>
+<tr>
+<td>V4-Pro</td>
+<td>9.0 元&#x2F;百万</td>
+<td>0.30 元&#x2F;百万</td>
+<td>27.0 元</td>
+</tr>
+</tbody></table>
+<p>缓存命中意味着什么？如果你的应用中有大量相似类型的请求（比如客服机器人、FAQ 系统），输入成本可以降低 97%。</p>
+<p><strong>如何让缓存命中？</strong> 保持系统提示词（system prompt）的一致性。如果你为每个用户会话动态拼接系统提示词，缓存命中率会大幅下降。最佳实践是使用固定的系统提示词，把动态内容放在 user prompt 里。</p>
+<h3 id="技巧-2：控制输出长度"><a href="#技巧-2：控制输出长度" class="headerlink" title="技巧 2：控制输出长度"></a>技巧 2：控制输出长度</h3><p>输出 token 的价格是输入 token 的 3 倍。很多开发者忽视了一个简单的事实：如果你要求模型”详细解释”，它可能输出 3000 字；如果你说”简洁回答”，它可能只输出 200 字。同样的任务，成本差距是 15 倍。</p>
+<p>一个实用的模式：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">response = client.chat.completions.create(</span><br><span class="line">    model=<span class="string">&quot;deepseek-v4-flash&quot;</span>,</span><br><span class="line">    messages=[</span><br><span class="line">        &#123;<span class="string">&quot;role&quot;</span>: <span class="string">&quot;system&quot;</span>, <span class="string">&quot;content&quot;</span>: <span class="string">&quot;你是一个简洁的助手，回答不超过 200 字&quot;</span>&#125;,</span><br><span class="line">        &#123;<span class="string">&quot;role&quot;</span>: <span class="string">&quot;user&quot;</span>, <span class="string">&quot;content&quot;</span>: user_input&#125;</span><br><span class="line">    ],</span><br><span class="line">    max_tokens=<span class="number">500</span>  <span class="comment"># 设置上限，防止意外超长输出</span></span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+
+<h3 id="技巧-3：利用空闲时段定价"><a href="#技巧-3：利用空闲时段定价" class="headerlink" title="技巧 3：利用空闲时段定价"></a>技巧 3：利用空闲时段定价</h3><p>DeepSeek 在空闲时段（北京时间 12:00-14:00、18:00-09:00）的价格是高峰时段的一半。如果你的应用不需要实时响应（比如批量处理、定时任务），可以在空闲时段执行，直接节省 50% 的成本。</p>
+<h3 id="技巧-4：选择正确的模型"><a href="#技巧-4：选择正确的模型" class="headerlink" title="技巧 4：选择正确的模型"></a>技巧 4：选择正确的模型</h3><p>V4-Flash 和 V4-Pro 的定价差距是 3 倍。对于 80% 的任务，V4-Flash 已经足够了。只有当你明确需要 V4-Pro 的推理深度或生成质量时，才值得升级到 V4-Pro。</p>
+<p>一个实用的 A&#x2F;B 测试方法：先用 V4-Flash 跑一个任务，如果对结果不满意，再用 V4-Pro 跑一次，对比结果。你会发现绝大多数情况下 V4-Flash 就够了。</p>
+<h3 id="技巧-5：批量请求优化"><a href="#技巧-5：批量请求优化" class="headerlink" title="技巧 5：批量请求优化"></a>技巧 5：批量请求优化</h3><p>如果你有大量请求要处理，DeepSeek 支持批量 API（通过 OpenAI 格式的 batch endpoint）。将请求合并为批量处理可以降低总延迟、提高吞吐量。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 使用 batch API 处理多个请求</span></span><br><span class="line">batch_tasks = [</span><br><span class="line">    &#123;<span class="string">&quot;custom_id&quot;</span>: <span class="string">&quot;task-1&quot;</span>, <span class="string">&quot;method&quot;</span>: <span class="string">&quot;POST&quot;</span>, <span class="string">&quot;url&quot;</span>: <span class="string">&quot;/v1/chat/completions&quot;</span>, <span class="string">&quot;body&quot;</span>: &#123;...&#125;&#125;,</span><br><span class="line">    &#123;<span class="string">&quot;custom_id&quot;</span>: <span class="string">&quot;task-2&quot;</span>, <span class="string">&quot;method&quot;</span>: <span class="string">&quot;POST&quot;</span>, <span class="string">&quot;url&quot;</span>: <span class="string">&quot;/v1/chat/completions&quot;</span>, <span class="string">&quot;body&quot;</span>: &#123;...&#125;&#125;,</span><br><span class="line">]</span><br><span class="line"></span><br><span class="line">batch = client.batches.create(</span><br><span class="line">    input_file_id=file_id,</span><br><span class="line">    endpoint=<span class="string">&quot;/v1/chat/completions&quot;</span>,</span><br><span class="line">    completion_window=<span class="string">&quot;24h&quot;</span></span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+
+<h3 id="技巧-6：Token-计量估算"><a href="#技巧-6：Token-计量估算" class="headerlink" title="技巧 6：Token 计量估算"></a>技巧 6：Token 计量估算</h3><p>一个中文汉字大约占 2 tokens，一个英文单词大约占 1-2 tokens。一个 1000 字的中文段落大约消耗 2000 tokens。在做成本估算时，这个换算关系很重要。</p>
+<h2 id="高级用法：前缀续写与-FIM"><a href="#高级用法：前缀续写与-FIM" class="headerlink" title="高级用法：前缀续写与 FIM"></a>高级用法：前缀续写与 FIM</h2><h3 id="前缀续写（Prefix-FIM）"><a href="#前缀续写（Prefix-FIM）" class="headerlink" title="前缀续写（Prefix FIM）"></a>前缀续写（Prefix FIM）</h3><p>DeepSeek 支持前缀续写功能——给它一个文件的开头和结尾，让模型补全中间部分。这在代码补全场景中非常有用。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">response = client.chat.completions.create(</span><br><span class="line">    model=<span class="string">&quot;deepseek-v4-flash&quot;</span>,</span><br><span class="line">    messages=[</span><br><span class="line">        &#123;<span class="string">&quot;role&quot;</span>: <span class="string">&quot;user&quot;</span>, <span class="string">&quot;content&quot;</span>: <span class="string">&quot;def calculate_tax(income):&lt;|FIM_PREFIX|&gt;\n    # 这里计算税额\n    &lt;FIM_SUFFIX&gt;\n    return result&quot;</span>&#125;</span><br><span class="line">    ]</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+
+<h3 id="FIM-补全"><a href="#FIM-补全" class="headerlink" title="FIM 补全"></a>FIM 补全</h3><p>FIM（Fill-In-the-Middle）是另一种代码补全模式，适用于需要”在中间插入”的场景。注意：FIM 仅在非思考模式下支持。</p>
+<h2 id="并发与限速"><a href="#并发与限速" class="headerlink" title="并发与限速"></a>并发与限速</h2><p>DeepSeek 对不同模型设置了不同的并发限制：</p>
+<ul>
+<li>V4-Flash：2500 并发</li>
+<li>V4-Pro：500 并发</li>
+</ul>
+<p>如果你的应用需要高并发，使用 V4-Flash 可以获得更高的吞吐上限。需要注意的是，这些是账户级别的限制，不是 API endpoint 的限制。如果你的应用需要更高的并发，可以联系 DeepSeek 商务团队申请提升。</p>
+<h2 id="错误处理与重试策略"><a href="#错误处理与重试策略" class="headerlink" title="错误处理与重试策略"></a>错误处理与重试策略</h2><p>API 调用不可能永远成功。一个健壮的应用应该有完善的错误处理：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> openai <span class="keyword">import</span> APIError, RateLimitError, APITimeoutError</span><br><span class="line"><span class="keyword">from</span> tenacity <span class="keyword">import</span> retry, stop_after_attempt, wait_exponential</span><br><span class="line"></span><br><span class="line"><span class="meta">@retry(<span class="params"></span></span></span><br><span class="line"><span class="params"><span class="meta">    stop=stop_after_attempt(<span class="params"><span class="number">3</span></span>),</span></span></span><br><span class="line"><span class="params"><span class="meta">    wait=wait_exponential(<span class="params">multiplier=<span class="number">1</span>, <span class="built_in">min</span>=<span class="number">4</span>, <span class="built_in">max</span>=<span class="number">10</span></span>),</span></span></span><br><span class="line"><span class="params"><span class="meta">    retry=<span class="keyword">lambda</span> e: <span class="built_in">isinstance</span>(<span class="params">e, (<span class="params">RateLimitError, APITimeoutError, APIError</span>)</span>)</span></span></span><br><span class="line"><span class="params"><span class="meta"></span>)</span></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">call_deepseek</span>(<span class="params">messages, model=<span class="string">&quot;deepseek-v4-flash&quot;</span></span>):</span><br><span class="line">    <span class="keyword">return</span> client.chat.completions.create(</span><br><span class="line">        model=model,</span><br><span class="line">        messages=messages</span><br><span class="line">    )</span><br></pre></td></tr></table></figure>
+
+<p>特别要注意速率限制。如果收到 429 错误（Too Many Requests），不要立即重试——先等待指数退避的时间。</p>
+<h2 id="实际案例：构建一个智能客服系统"><a href="#实际案例：构建一个智能客服系统" class="headerlink" title="实际案例：构建一个智能客服系统"></a>实际案例：构建一个智能客服系统</h2><p>下面是一个完整的示例，展示如何将上述所有技巧整合到一个智能客服系统中：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> os</span><br><span class="line"><span class="keyword">from</span> openai <span class="keyword">import</span> OpenAI</span><br><span class="line"></span><br><span class="line"><span class="comment"># 固定系统提示词（利于缓存命中）</span></span><br><span class="line">SYSTEM_PROMPT = <span class="string">&quot;&quot;&quot;</span></span><br><span class="line"><span class="string">你是某电商平台的智能客服助手。回答要求：</span></span><br><span class="line"><span class="string">- 简洁友好，不超过 150 字</span></span><br><span class="line"><span class="string">- 如果无法回答问题，请引导用户联系客服</span></span><br><span class="line"><span class="string">- 不要使用 Markdown 格式</span></span><br><span class="line"><span class="string">&quot;&quot;&quot;</span></span><br><span class="line"></span><br><span class="line">client = OpenAI(</span><br><span class="line">    api_key=os.environ[<span class="string">&quot;DEEPSEEK_API_KEY&quot;</span>],</span><br><span class="line">    base_url=<span class="string">&quot;https://api.deepseek.com&quot;</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">answer_question</span>(<span class="params">user_question</span>):</span><br><span class="line">    messages = [</span><br><span class="line">        &#123;<span class="string">&quot;role&quot;</span>: <span class="string">&quot;system&quot;</span>, <span class="string">&quot;content&quot;</span>: SYSTEM_PROMPT&#125;,</span><br><span class="line">        &#123;<span class="string">&quot;role&quot;</span>: <span class="string">&quot;user&quot;</span>, <span class="string">&quot;content&quot;</span>: user_question&#125;</span><br><span class="line">    ]</span><br><span class="line">    response = client.chat.completions.create(</span><br><span class="line">        model=<span class="string">&quot;deepseek-v4-flash&quot;</span>,</span><br><span class="line">        messages=messages,</span><br><span class="line">        max_tokens=<span class="number">300</span>,</span><br><span class="line">        temperature=<span class="number">0.3</span></span><br><span class="line">    )</span><br><span class="line">    <span class="keyword">return</span> response.choices[<span class="number">0</span>].message.content</span><br><span class="line"></span><br><span class="line"><span class="comment"># 使用</span></span><br><span class="line">answer = answer_question(<span class="string">&quot;我的订单什么时候发货？&quot;</span>)</span><br><span class="line"><span class="built_in">print</span>(answer)</span><br></pre></td></tr></table></figure>
+
+<p>这个设计的要点：</p>
+<ul>
+<li>系统提示词固定（缓存命中率高）</li>
+<li>限制了最大输出长度（控制成本）</li>
+<li>temperature 设为 0.3（保持回答稳定）</li>
+<li>不需要思考模式（简单问答不需要推理）</li>
+</ul>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>DeepSeek 的 API 设计非常工程师友好——完全兼容 OpenAI 格式意味着你几乎不需要改代码就能从其他模型迁移过来。但”能用”和”用得好”之间有很大的差距。</p>
+<p>这篇文章里提到的六个成本优化技巧，核心思想可以归纳为一句话：<strong>用正确的模型做正确的事，避免不必要的 token 消耗</strong>。思考模式是双刃剑，缓存机制是被低估的利器，空闲时段定价是给长期用户的礼物。</p>
+<p>理解了这些，你就能在享受 DeepSeek 强大能力的同时，把成本控制在合理的范围内。</p>
+<p>下篇文章我会讲如何在本地 GPU 上部署 DeepSeek 模型——对于有 RTX 3060 12GB 这样的显卡、不想依赖外部 API 的开发者来说，这是另一条非常有价值的路线。</p>
+
+  </div>
+  
+  
+    <div class="tags">
+      标签: 
+      
+        <a href="/blogs/tags/DeepSeek/">#DeepSeek</a>
+      
+        <a href="/blogs/tags/API/">#API</a>
+      
+        <a href="/blogs/tags/Prompt/">#Prompt</a>
+      
+        <a href="/blogs/tags/%E5%BC%80%E5%8F%91%E5%AE%9E%E6%88%98/">#开发实战</a>
+      
+        <a href="/blogs/tags/%E6%88%90%E6%9C%AC%E4%BC%98%E5%8C%96/">#成本优化</a>
+      
+    </div>
+  
+</article>
+  </main>
+  
+  <footer>
+    <p>© 2025 创业思考博客</p>
+  </footer>
+</body>
+</html>
