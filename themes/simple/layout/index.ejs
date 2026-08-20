@@ -1,7 +1,7 @@
 <% page.posts.each(function(post){ %>
   <article>
     <h2><a href="<%- url_for(post.path) %>"><%= post.title %></a></h2>
-    <time><%= date(post.date, 'YYYY-MM-DD') %></time>
+    <time><%= date(post.date, 'YYYY-MM-DD HH:MM') %></time>
     <div class="excerpt">
       <%- truncate(
         strip_html(post.content.replace(/<h1[^>]*>.*?<\/h1>\s*/i, ''))
