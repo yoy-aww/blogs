@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>DeepSeek R1 本地部署实操指南：RTX 3060 12GB + Ollama 全流程 | 创业思考博客</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/blogs/css/style.css">
+<meta name="generator" content="Hexo 8.1.1"></head>
+<body>
+  <header>
+    <h1><a href="/blogs/">创业思考博客</a></h1>
+    <nav>
+      
+        <a href="/blogs/">首页</a>
+      
+        <a href="/blogs/archives">归档</a>
+      
+        <a href="/blogs/about">关于</a>
+      
+    </nav>
+  </header>
+  
+  <main>
+    <article>
+  <h1>DeepSeek R1 本地部署实操指南：RTX 3060 12GB + Ollama 全流程</h1>
+  <time>2026-08-20</time>
+  
+  <div class="content post-content">
+    <h2 id="动机"><a href="#动机" class="headerlink" title="动机"></a>动机</h2><p>上周写了 DeepSeek 系列文章，很多朋友问同一个问题：能不能在自己电脑上跑？答案是可以的——前提是选对模型、用对工具。</p>
+<p>这篇文章以我身边的配置为基准——RTX 3060 12GB、Linux 系统——把整个流程走一遍，从硬件要求到实际运行，全部是实操细节，不是空谈。</p>
+<h2 id="硬件要求"><a href="#硬件要求" class="headerlink" title="硬件要求"></a>硬件要求</h2><p>先给一个明确的对照表：</p>
+<table>
+<thead>
+<tr>
+<th>配置项</th>
+<th>推荐值</th>
+<th>最低值</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>GPU</td>
+<td>12GB 显存</td>
+<td>4GB 显存</td>
+<td>7B 模型推荐 12GB+</td>
+</tr>
+<tr>
+<td>内存</td>
+<td>16GB</td>
+<td>8GB</td>
+<td>模型加载前</td>
+</tr>
+<tr>
+<td>磁盘空间</td>
+<td>10GB 可用</td>
+<td>6GB</td>
+<td>Q4 量化后约 4GB</td>
+</tr>
+<tr>
+<td>系统</td>
+<td>Linux &#x2F; Windows 10+ &#x2F; macOS</td>
+<td>同左</td>
+<td>Linux 优先</td>
+</tr>
+</tbody></table>
+<p>对于 RTX 3060 12GB，能跑什么级别的模型：</p>
+<table>
+<thead>
+<tr>
+<th>模型</th>
+<th>量化后大小</th>
+<th>能否运行</th>
+<th>实际体验</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>DeepSeek-R1-Distill-Qwen-1.5B</td>
+<td>~1GB</td>
+<td>✅ 轻松</td>
+<td>速度极快，约 80+ tokens&#x2F;s</td>
+</tr>
+<tr>
+<td>DeepSeek-R1-Distill-Qwen-7B</td>
+<td>~4GB</td>
+<td>✅ 流畅</td>
+<td>速度约 8-12 tokens&#x2F;s</td>
+</tr>
+<tr>
+<td>DeepSeek-R1-Distill-Qwen-32B</td>
+<td>~20GB</td>
+<td>❌ 显存不够</td>
+<td>即使 Q3 量化也超 12GB</td>
+</tr>
+<tr>
+<td>DeepSeek-R1（671B）</td>
+<td>~270GB</td>
+<td>❌ 绝对不行</td>
+<td>除非你有 8 张 H100</td>
+</tr>
+</tbody></table>
+<p>结论：<strong>7B 是 RTX 3060 12GB 能跑到的最佳选择</strong>。</p>
+<h2 id="环境准备"><a href="#环境准备" class="headerlink" title="环境准备"></a>环境准备</h2><h3 id="检查-GPU-是否被正确识别"><a href="#检查-GPU-是否被正确识别" class="headerlink" title="检查 GPU 是否被正确识别"></a>检查 GPU 是否被正确识别</h3><p>在 Linux 上，先确认驱动正常：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 检查 NVIDIA 驱动</span></span><br><span class="line">nvidia-smi</span><br><span class="line"></span><br><span class="line"><span class="comment"># 输出应该类似：</span></span><br><span class="line"><span class="comment"># +-----------------------------------------------------------------------------+</span></span><br><span class="line"><span class="comment"># | NVIDIA-SMI 535.104.05   Driver Version: 535.104.05   CUDA Version: 12.2    |</span></span><br><span class="line"><span class="comment"># | ... | GPU-0 | NVIDIA GeForce RTX 3060 | ... |</span></span><br></pre></td></tr></table></figure>
+
+<p>如果 <code>nvidia-smi</code> 报错，先装驱动再往下走。</p>
+<h3 id="安装-Ollama"><a href="#安装-Ollama" class="headerlink" title="安装 Ollama"></a>安装 Ollama</h3><p>Ollama 是目前最简单的本地模型部署工具，一条命令搞定：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Linux 一键安装</span></span><br><span class="line">curl -fsSL https://ollama.com/install.sh | sh</span><br><span class="line"></span><br><span class="line"><span class="comment"># 验证安装</span></span><br><span class="line">ollama --version</span><br><span class="line"><span class="comment"># 输出示例：Ollama version 0.5.x</span></span><br></pre></td></tr></table></figure>
+
+<p>安装完成后会自动启动后台服务。可以用以下命令确认状态：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ollama serve</span><br></pre></td></tr></table></figure>
+
+<p>如果这个命令没输出且没有报错，说明后台服务已经在运行（它会一直挂在后台）。</p>
+<h2 id="拉取模型"><a href="#拉取模型" class="headerlink" title="拉取模型"></a>拉取模型</h2><h3 id="推荐方案：7B-Q4-量化"><a href="#推荐方案：7B-Q4-量化" class="headerlink" title="推荐方案：7B Q4 量化"></a>推荐方案：7B Q4 量化</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ollama pull deepseek-r1:7b</span><br></pre></td></tr></table></figure>
+
+<p>这条命令会做三件事：</p>
+<ol>
+<li>从 HuggingFace 下载量化后的模型文件（约 4GB）</li>
+<li>自动选择合适的量化格式（Q4_K_M）</li>
+<li>将模型注册到本地</li>
+</ol>
+<p>下载进度会实时显示，大概需要 5-15 分钟，取决于网速。</p>
+<h3 id="备选方案：1-5B-极速版"><a href="#备选方案：1-5B-极速版" class="headerlink" title="备选方案：1.5B 极速版"></a>备选方案：1.5B 极速版</h3><p>如果磁盘空间紧张或想体验更快的速度：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ollama pull deepseek-r1:1.5b</span><br></pre></td></tr></table></figure>
+
+<p>1.5B 版本只需要约 1GB 空间，推理速度极快，但质量会明显低于 7B。</p>
+<h2 id="运行模型"><a href="#运行模型" class="headerlink" title="运行模型"></a>运行模型</h2><h3 id="交互式对话"><a href="#交互式对话" class="headerlink" title="交互式对话"></a>交互式对话</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ollama run deepseek-r1:7b</span><br></pre></td></tr></table></figure>
+
+<p>启动后直接和模型对话：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">&gt;&gt;&gt; 请解释什么是 MoE 架构</span><br><span class="line"></span><br><span class="line">&lt;antThinking&gt;</span><br><span class="line">...（模型的内部推理过程）...</span><br><span class="line">&lt;/antThinking&gt;</span><br><span class="line"></span><br><span class="line">MoE（Mixture of Experts，专家混合）是一种深度学习架构...</span><br></pre></td></tr></table></figure>
+
+<p>注意：模型的推理过程会被 <code>&lt;antThinking&gt;</code> 标签包裹，你在终端里能看到完整的思考过程，这是 R1 系列模型的特征。</p>
+<h3 id="退出"><a href="#退出" class="headerlink" title="退出"></a>退出</h3><p>按 <code>Ctrl+D</code> 退出 Ollama 交互模式。模型会留在后台，下次直接 <code>ollama run deepseek-r1:7b</code> 即可。</p>
+<h2 id="通过-API-调用"><a href="#通过-API-调用" class="headerlink" title="通过 API 调用"></a>通过 API 调用</h2><p>Ollama 会自动提供一个 HTTP API，默认监听 <code>localhost:11434</code>：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 用 curl 直接调用</span></span><br><span class="line">curl http://localhost:11434/api/generate \</span><br><span class="line">  -d <span class="string">&#x27;&#123;</span></span><br><span class="line"><span class="string">    &quot;model&quot;: &quot;deepseek-r1:7b&quot;,</span></span><br><span class="line"><span class="string">    &quot;prompt&quot;: &quot;解释 Transformer 架构&quot;,</span></span><br><span class="line"><span class="string">    &quot;stream&quot;: false</span></span><br><span class="line"><span class="string">  &#125;&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="Python-调用"><a href="#Python-调用" class="headerlink" title="Python 调用"></a>Python 调用</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"></span><br><span class="line">data = &#123;</span><br><span class="line">    <span class="string">&quot;model&quot;</span>: <span class="string">&quot;deepseek-r1:7b&quot;</span>,</span><br><span class="line">    <span class="string">&quot;prompt&quot;</span>: <span class="string">&quot;用 Python 写一个快速排序&quot;</span>,</span><br><span class="line">    <span class="string">&quot;stream&quot;</span>: <span class="literal">False</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">response = requests.post(<span class="string">&quot;http://localhost:11434/api/generate&quot;</span>, json=data)</span><br><span class="line"><span class="built_in">print</span>(response.json()[<span class="string">&quot;response&quot;</span>])</span><br></pre></td></tr></table></figure>
+
+<h3 id="使用-OpenAI-兼容-API"><a href="#使用-OpenAI-兼容-API" class="headerlink" title="使用 OpenAI 兼容 API"></a>使用 OpenAI 兼容 API</h3><p>Ollama 还支持 OpenAI 兼容格式，可以直接用 OpenAI SDK：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> openai <span class="keyword">import</span> OpenAI</span><br><span class="line"></span><br><span class="line">client = OpenAI(</span><br><span class="line">    base_url=<span class="string">&quot;http://localhost:11434/v1&quot;</span>,</span><br><span class="line">    api_key=<span class="string">&quot;ollama&quot;</span>  <span class="comment"># 不需要真实 key</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line">response = client.chat.completions.create(</span><br><span class="line">    model=<span class="string">&quot;deepseek-r1:7b&quot;</span>,</span><br><span class="line">    messages=[</span><br><span class="line">        &#123;<span class="string">&quot;role&quot;</span>: <span class="string">&quot;user&quot;</span>, <span class="string">&quot;content&quot;</span>: <span class="string">&quot;用 Python 写一个快速排序&quot;</span>&#125;</span><br><span class="line">    ]</span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="built_in">print</span>(response.choices[<span class="number">0</span>].message.content)</span><br></pre></td></tr></table></figure>
+
+<h2 id="性能实测"><a href="#性能实测" class="headerlink" title="性能实测"></a>性能实测</h2><p>在我的环境（RTX 3060 12GB + OpenCloudOS 9.4）上实测数据：</p>
+<table>
+<thead>
+<tr>
+<th>指标</th>
+<th>deepseek-r1:7b (Q4)</th>
+<th>deepseek-r1:1.5b (Q4)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>显存占用</td>
+<td>~4.2GB</td>
+<td>~1.1GB</td>
+</tr>
+<tr>
+<td>首 token 延迟</td>
+<td>~800ms</td>
+<td>~300ms</td>
+</tr>
+<tr>
+<td>tokens&#x2F;秒</td>
+<td>~10</td>
+<td>~85</td>
+</tr>
+<tr>
+<td>上下文长度</td>
+<td>8192</td>
+<td>4096</td>
+</tr>
+</tbody></table>
+<p>注意：这些数字是参考值，实际速度取决于系统负载、显存带宽、模型加载状态等多种因素。</p>
+<h3 id="如何查看显存使用情况"><a href="#如何查看显存使用情况" class="headerlink" title="如何查看显存使用情况"></a>如何查看显存使用情况</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 在模型运行过程中打开另一个终端</span></span><br><span class="line">watch -n 1 nvidia-smi</span><br></pre></td></tr></table></figure>
+
+<p>观察 GPU Memory Usage 和 Vbios 行的显存占用，确认没有接近 12GB 上限。</p>
+<h2 id="常见配置"><a href="#常见配置" class="headerlink" title="常见配置"></a>常见配置</h2><h3 id="修改模型大小"><a href="#修改模型大小" class="headerlink" title="修改模型大小"></a>修改模型大小</h3><p>如果你想指定使用 Q5 或 Q8 量化（质量更高但显存需求更大）：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 使用 Q5 量化（约 5GB）</span></span><br><span class="line">ollama pull deepseek-r1:7b-q5</span><br><span class="line"></span><br><span class="line"><span class="comment"># 使用 Q8 量化（约 7GB）</span></span><br><span class="line">ollama pull deepseek-r1:7b-q8</span><br></pre></td></tr></table></figure>
+
+<p>对于 12GB 显存，Q4（默认）是最稳妥的选择，Q5 可以尝试但会牺牲上下文长度。</p>
+<h3 id="限制上下文长度"><a href="#限制上下文长度" class="headerlink" title="限制上下文长度"></a>限制上下文长度</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 启动时指定最大上下文长度</span></span><br><span class="line">OLLAMA_MAX_LOADED_MODELS=2 ollama serve</span><br><span class="line"></span><br><span class="line"><span class="comment"># 在对话中指定</span></span><br><span class="line">ollama run deepseek-r1:7b <span class="string">&quot;你的回答不能超过 100 字。&quot;</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="模型管理与维护"><a href="#模型管理与维护" class="headerlink" title="模型管理与维护"></a>模型管理与维护</h2><h3 id="列出本地模型"><a href="#列出本地模型" class="headerlink" title="列出本地模型"></a>列出本地模型</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ollama list</span><br></pre></td></tr></table></figure>
+
+<h3 id="删除不用的模型"><a href="#删除不用的模型" class="headerlink" title="删除不用的模型"></a>删除不用的模型</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ollama <span class="built_in">rm</span> deepseek-r1:1.5b</span><br></pre></td></tr></table></figure>
+
+<h3 id="导出模型文件"><a href="#导出模型文件" class="headerlink" title="导出模型文件"></a>导出模型文件</h3><p>如果需要手动备份模型文件：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 查看模型存储位置</span></span><br><span class="line">OLLAMA_MODELS=~/.ollama/models ollama serve</span><br><span class="line"></span><br><span class="line"><span class="comment"># 模型文件在 ~/.ollama/models/ 目录下</span></span><br><span class="line"><span class="built_in">ls</span> ~/.ollama/models/</span><br></pre></td></tr></table></figure>
+
+<h2 id="与-API-对比：什么时候该用哪个"><a href="#与-API-对比：什么时候该用哪个" class="headerlink" title="与 API 对比：什么时候该用哪个"></a>与 API 对比：什么时候该用哪个</h2><table>
+<thead>
+<tr>
+<th>场景</th>
+<th>推荐方案</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>日常学习、实验</td>
+<td>Ollama 本地 7B</td>
+</tr>
+<tr>
+<td>需要处理超长文档</td>
+<td>DeepSeek API（100万 token）</td>
+</tr>
+<tr>
+<td>需要最强推理能力</td>
+<td>DeepSeek API V4-Pro</td>
+</tr>
+<tr>
+<td>有敏感数据不能外传</td>
+<td>Ollama 本地</td>
+</tr>
+<tr>
+<td>需要批量处理任务</td>
+<td>DeepSeek API</td>
+</tr>
+<tr>
+<td>成本敏感</td>
+<td>Ollama 本地（免费）</td>
+</tr>
+</tbody></table>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>在 RTX 3060 12GB 上跑 DeepSeek R1 7B 的完整流程：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 1. 安装 Ollama</span></span><br><span class="line">curl -fsSL https://ollama.com/install.sh | sh</span><br><span class="line"></span><br><span class="line"><span class="comment"># 2. 拉取模型（约 4GB，5-15 分钟）</span></span><br><span class="line">ollama pull deepseek-r1:7b</span><br><span class="line"></span><br><span class="line"><span class="comment"># 3. 运行</span></span><br><span class="line">ollama run deepseek-r1:7b</span><br><span class="line"></span><br><span class="line"><span class="comment"># 4. 通过 API 调用（可选）</span></span><br><span class="line">curl http://localhost:11434/api/generate \</span><br><span class="line">  -d <span class="string">&#x27;&#123;&quot;model&quot;: &quot;deepseek-r1:7b&quot;, &quot;prompt&quot;: &quot;你好&quot;, &quot;stream&quot;: false&#125;&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<p>就这么简单。7B 的推理能力（AIME 50.4%）已经超过了 GPT-4 的水平，而成本为零。对于学习和日常开发来说，这是一个非常值得投入的选项。</p>
+
+  </div>
+  
+  
+    <div class="tags">
+      标签: 
+      
+        <a href="/blogs/tags/DeepSeek/">#DeepSeek</a>
+      
+        <a href="/blogs/tags/%E6%9C%AC%E5%9C%B0%E9%83%A8%E7%BD%B2/">#本地部署</a>
+      
+        <a href="/blogs/tags/GPU/">#GPU</a>
+      
+        <a href="/blogs/tags/Ollama/">#Ollama</a>
+      
+        <a href="/blogs/tags/RTX-3060/">#RTX 3060</a>
+      
+    </div>
+  
+</article>
+  </main>
+  
+  <footer>
+    <p>© 2025 创业思考博客</p>
+  </footer>
+</body>
+</html>
