@@ -26,5 +26,8 @@
   },
   "overrides": {
     "strip-ansi": "6.0.1"
+  },
+  "devDependencies": {
+    "hexo-deployer-git": "^4.0.0"
   }
 }
