@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>本地跑大模型：Ollama 入门与常用命令 | 创业思考博客</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/blogs/css/style.css">
+<meta name="generator" content="Hexo 8.1.1"></head>
+<body>
+  <header>
+    <h1><a href="/blogs/">创业思考博客</a></h1>
+    <nav>
+      
+        <a href="/blogs/">首页</a>
+      
+        <a href="/blogs/archives">归档</a>
+      
+        <a href="/blogs/about">关于</a>
+      
+    </nav>
+  </header>
+  
+  <main>
+    <article>
+  <h1>本地跑大模型：Ollama 入门与常用命令</h1>
+  <time>2026-08-28</time>
+  
+  <div class="content post-content">
+    <p>刚接触本地大模型时，我犯过一个看似很蠢的错误：我的显卡有 12GB 显存，看到一个模型文件只有 8GB，心想”12 大于 8，肯定能跑”。结果一跑就卡成 PPT，查了半天才发现自己完全理解错了。</p>
+<p>这篇文章就把我踩过的坑和最终沉淀下来的用法整理出来，给同样想在自己电脑上跑大模型的你。</p>
+<h2 id="为什么”显存大于模型文件”还不够"><a href="#为什么”显存大于模型文件”还不够" class="headerlink" title="为什么”显存大于模型文件”还不够"></a>为什么”显存大于模型文件”还不够</h2><p>这是新手最容易踩的直觉误区：<strong>模型文件的大小，不等于运行时占的显存。</strong></p>
+<p>跑模型时，显存里要装的东西远不止权重这一项：</p>
+<table>
+<thead>
+<tr>
+<th>占显存的东西</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>模型权重</td>
+<td>就是那个几个 GB 的模型文件</td>
+</tr>
+<tr>
+<td>KV cache</td>
+<td>生成时缓存上下文，<strong>对话越长占得越多</strong></td>
+</tr>
+<tr>
+<td>计算缓冲区</td>
+<td>推理时的中间激活值、临时内存</td>
+</tr>
+<tr>
+<td>运行时开销</td>
+<td>推理框架自身 + 系统进程</td>
+</tr>
+</tbody></table>
+<p>举个例子：一个 8.1GB 的模型，权重占掉大半，再加 2-3GB 的上下文缓存、1-2GB 的计算缓冲区，几乎正好顶满 12GB 的天花板。</p>
+<p>所以真实情况是：</p>
+<ul>
+<li><strong>短对话</strong>：能跑，不爆</li>
+<li><strong>长对话 &#x2F; 长文档</strong>：爆显存 → 框架自动把一部分塞回 CPU → 生成速度从每秒几十个 token 掉到个位数，卡到没法用</li>
+</ul>
+<p><strong>“能跑”和”跑得舒服”是两回事。</strong> 判断一个模型适不适合你的显卡，不能只看文件大小，还要看它的参数量、你的显存余量，以及你平时要用多长的上下文。</p>
+<h2 id="为什么选-Ollama"><a href="#为什么选-Ollama" class="headerlink" title="为什么选 Ollama"></a>为什么选 Ollama</h2><p>选 Ollama 的原因很简单：它是目前把”本地跑大模型”门槛降到最低的工具。</p>
+<ul>
+<li><strong>一条命令拉起模型</strong>，不用手动配置 CUDA、不用管理 Python 环境</li>
+<li><strong>自带模型管理</strong>，下载、删除、切换都极简</li>
+<li><strong>自带 HTTP API</strong>，任何程序都能直接调用，方便写脚本</li>
+<li><strong>跨平台</strong>，Windows &#x2F; macOS &#x2F; Linux 通吃</li>
+</ul>
+<p>装好之后它是一个后台服务（默认端口 11434），<code>ollama run</code> 只是它的命令行客户端。</p>
+<h2 id="模型管理命令"><a href="#模型管理命令" class="headerlink" title="模型管理命令"></a>模型管理命令</h2><h3 id="查看已装模型"><a href="#查看已装模型" class="headerlink" title="查看已装模型"></a>查看已装模型</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ollama list</span><br></pre></td></tr></table></figure>
+
+<p>输出模型名、ID、大小、修改时间。我机器上现在的阵容：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">qwen3:8b          5.2 GB   # 中文主力</span><br><span class="line">deepseek-r1:14b   9.0 GB   # 推理专攻</span><br><span class="line">gemma3:12b        8.1 GB   # 英文复杂推理</span><br></pre></td></tr></table></figure>
+
+<h3 id="下载模型"><a href="#下载模型" class="headerlink" title="下载模型"></a>下载模型</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ollama pull qwen3:8b</span><br></pre></td></tr></table></figure>
+
+<p>首次下载较慢，但会自动断点续传。国内用户下载大模型经常卡，可以走镜像加速：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">OLLAMA_LIBRARY_HOST=https://ollama.buaa.cloud ollama pull qwen3:8b</span><br></pre></td></tr></table></figure>
+
+<h3 id="查看详情-删除-复制"><a href="#查看详情-删除-复制" class="headerlink" title="查看详情 &#x2F; 删除 &#x2F; 复制"></a>查看详情 &#x2F; 删除 &#x2F; 复制</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">ollama show qwen3:8b   <span class="comment"># 架构、参数、上下文长度、量化等级</span></span><br><span class="line">ollama <span class="built_in">rm</span> qwen3:8b     <span class="comment"># 删除，模型都是几个 GB 起步，不用的及时清</span></span><br><span class="line">ollama <span class="built_in">cp</span> qwen3:8b my  <span class="comment"># 复制改名，偶尔用于自定义模型</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="运行模型"><a href="#运行模型" class="headerlink" title="运行模型"></a>运行模型</h2><h3 id="交互式聊天"><a href="#交互式聊天" class="headerlink" title="交互式聊天"></a>交互式聊天</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ollama run qwen3:8b</span><br></pre></td></tr></table></figure>
+
+<p>进入对话模式，直接打字。内置几个斜杠命令：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">/bye        退出</span><br><span class="line">/?          查看全部斜杠命令</span><br><span class="line">/set ...    改参数，比如 /set temperature 0.8</span><br><span class="line">/save 名字  把当前对话和参数保存为自定义模型</span><br></pre></td></tr></table></figure>
+
+<h3 id="一次性提问（脚本友好）"><a href="#一次性提问（脚本友好）" class="headerlink" title="一次性提问（脚本友好）"></a>一次性提问（脚本友好）</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ollama run qwen3:8b <span class="string">&quot;帮我写一个冒泡排序的 Python 代码&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>跑完直接出结果、自动退出，非常适合写脚本时调用。</p>
+<h3 id="传入整段文本"><a href="#传入整段文本" class="headerlink" title="传入整段文本"></a>传入整段文本</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ollama run qwen3:8b &lt; 文章.txt</span><br></pre></td></tr></table></figure>
+
+<p>把文件内容喂给模型，比如让它总结、翻译、改写。</p>
+<h3 id="常用生成参数"><a href="#常用生成参数" class="headerlink" title="常用生成参数"></a>常用生成参数</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 控制随机性（0=死板，1=正常，2=放飞）</span></span><br><span class="line">ollama run qwen3:8b --temperature 0.3 <span class="string">&quot;解释什么是区块链&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 限制最大输出长度</span></span><br><span class="line">ollama run qwen3:8b --num-predict 200 <span class="string">&quot;写一首五言绝句&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 设定角色</span></span><br><span class="line">ollama run qwen3:8b --system <span class="string">&quot;你是一位毒舌的编程导师&quot;</span> <span class="string">&quot;看看我这段代码&quot;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="看真实推理速度"><a href="#看真实推理速度" class="headerlink" title="看真实推理速度"></a>看真实推理速度</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ollama run --verbose qwen3:8b <span class="string">&quot;测试&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>最后会输出 <code>eval rate: xx tokens/s</code>。<strong>这是诊断神器</strong>——如果速度突然从几十掉到个位数，基本可以断定显存爆了、模型掉到 CPU 上了。</p>
+<h2 id="进程管理"><a href="#进程管理" class="headerlink" title="进程管理"></a>进程管理</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">ollama ps         <span class="comment"># 看哪个模型在内存中、占了多大显存</span></span><br><span class="line">ollama stop qwen3:8b   <span class="comment"># 手动卸载模型</span></span><br></pre></td></tr></table></figure>
+
+<p>模型空闲 5 分钟会自动卸载，日常不用手动管，但 <code>ollama ps</code> 对排查显存问题很有用。</p>
+<h2 id="从程序里调用"><a href="#从程序里调用" class="headerlink" title="从程序里调用"></a>从程序里调用</h2><p>Ollama 自带 HTTP API，任何语言都能调：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">curl http://localhost:11434/api/generate -d <span class="string">&#x27;&#123;</span></span><br><span class="line"><span class="string">  &quot;model&quot;: &quot;qwen3:8b&quot;,</span></span><br><span class="line"><span class="string">  &quot;prompt&quot;: &quot;你好&quot;,</span></span><br><span class="line"><span class="string">  &quot;stream&quot;: false</span></span><br><span class="line"><span class="string">&#125;&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<p>Python 更简单：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> ollama <span class="keyword">import</span> chat</span><br><span class="line"><span class="built_in">print</span>(chat(model=<span class="string">&quot;qwen3:8b&quot;</span>, messages=[&#123;<span class="string">&quot;role&quot;</span>: <span class="string">&quot;user&quot;</span>, <span class="string">&quot;content&quot;</span>: <span class="string">&quot;你好&quot;</span>&#125;])[<span class="string">&quot;message&quot;</span>][<span class="string">&quot;content&quot;</span>])</span><br></pre></td></tr></table></figure>
+
+<p>这意味着你可以在自己的脚本、服务、自动化流程里直接调本地模型，不需要额外接任何云 API。</p>
+<h2 id="针对-3060-12GB-的模型选择建议"><a href="#针对-3060-12GB-的模型选择建议" class="headerlink" title="针对 3060 12GB 的模型选择建议"></a>针对 3060 12GB 的模型选择建议</h2><p>最后给和我一样用 RTX 3060 12GB 的朋友一个参考：</p>
+<table>
+<thead>
+<tr>
+<th>场景</th>
+<th>选谁</th>
+<th>理由</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>日常写作、聊天、编程</td>
+<td><strong>qwen3:8b</strong></td>
+<td>中文强、只占 5.2G、留足显存跑长上下文</td>
+</tr>
+<tr>
+<td>数学、逻辑、复杂推理</td>
+<td>deepseek-r1:14b</td>
+<td>推理链突出，但显存紧，别开太长上下文</td>
+</tr>
+<tr>
+<td>纯英文复杂推理</td>
+<td>gemma3:12b</td>
+<td>英文强，但 8.1G 权重 + 上下文容易顶满 12G，长对话会爆</td>
+</tr>
+</tbody></table>
+<p>核心原则一句话：<strong>选模型不是看”文件多大我显存多大”，而是看”权重 + 上下文缓存 + 计算开销”能不能在你的显存里舒服地待着。</strong> 模型小一点、中文更强、跑得更快，往往比硬上大模型体验好得多。</p>
+<p>本地大模型的门槛已经低到一条命令，剩下的就是挑对模型、理解显存的脾气。祝你跑得顺利。</p>
+
+  </div>
+  
+  
+    <div class="tags">
+      标签: 
+      
+        <a href="/blogs/tags/%E5%A4%A7%E6%A8%A1%E5%9E%8B/">#大模型</a>
+      
+        <a href="/blogs/tags/%E6%9C%AC%E5%9C%B0%E9%83%A8%E7%BD%B2/">#本地部署</a>
+      
+        <a href="/blogs/tags/Ollama/">#Ollama</a>
+      
+        <a href="/blogs/tags/%E6%8A%80%E6%9C%AF%E6%95%99%E7%A8%8B/">#技术教程</a>
+      
+    </div>
+  
+</article>
+  </main>
+  
+  <footer>
+    <p>© 2025 创业思考博客</p>
+  </footer>
+</body>
+</html>
