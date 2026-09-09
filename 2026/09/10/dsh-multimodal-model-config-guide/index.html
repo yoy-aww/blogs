@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>dsh多模态模型配置指南：哪些模型支持图片，怎么声明 | 创业思考博客</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/blogs/css/style.css">
+<meta name="generator" content="Hexo 8.1.1"></head>
+<body>
+  <header>
+    <h1><a href="/blogs/">创业思考博客</a></h1>
+    <nav>
+      
+        <a href="/blogs/">首页</a>
+      
+        <a href="/blogs/archives">归档</a>
+      
+        <a href="/blogs/about">关于</a>
+      
+    </nav>
+  </header>
+  
+  <main>
+    <article>
+  <h1>dsh多模态模型配置指南：哪些模型支持图片，怎么声明</h1>
+  <time>2026-09-10</time>
+  
+  <div class="content post-content">
+    <p>昨天我遇到了一个奇怪的问题：在 dsh（DeepSeek Harness）里给 sensenova-6.8-flash-lite 上传图片，结果报错”Model does not support image input”。后来发现原因很简单——<strong>模型的 <code>input</code> 能力没有在配置里声明</strong>，pi-ai 默认只认文本。</p>
+<p>修好之后我整理了所有模型的多模态能力，顺便把完整的配置方法写下来，方便以后用到。</p>
+<hr>
+<h2 id="一、dsh-是怎么判断模型是否支持图片的？"><a href="#一、dsh-是怎么判断模型是否支持图片的？" class="headerlink" title="一、dsh 是怎么判断模型是否支持图片的？"></a>一、dsh 是怎么判断模型是否支持图片的？</h2><p>dsh 的 LLM 层用的是 pi-ai 库。它在收到图片请求时，会检查模型的 <code>inputModalities</code>：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// pi-ai 源码</span></span><br><span class="line"><span class="keyword">if</span> (containsImage &amp;&amp; !model.<span class="property">input</span>.<span class="title function_">includes</span>(<span class="string">&quot;image&quot;</span>)) &#123;</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">LlmError</span>(<span class="string">`pi-ai model &quot;<span class="subst">$&#123;model.id&#125;</span>&quot; does not support image input`</span>, <span class="string">&quot;UNSUPPORTED_CONTENT&quot;</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>而模型的能力来自你的 <code>settings.yaml</code>：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">models:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">id:</span> <span class="string">sensenova-6.8-flash-lite</span></span><br><span class="line">    <span class="attr">input:</span>          <span class="comment"># ← 这个字段决定了一切</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">text</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">image</span></span><br></pre></td></tr></table></figure>
+
+<p>如果不写 <code>input</code>，pi-ai 使用默认值 <code>[&quot;text&quot;]</code>，图片就被拒了。</p>
+<p><strong>记住一条规则：不声明 &#x3D; 不支持。</strong></p>
+<hr>
+<h2 id="二、各模型多模态能力对照表"><a href="#二、各模型多模态能力对照表" class="headerlink" title="二、各模型多模态能力对照表"></a>二、各模型多模态能力对照表</h2><p>根据供应商文档和源码逻辑，整理如下：</p>
+<h3 id="sense-nova-提供商（讯飞-Sensenova）"><a href="#sense-nova-提供商（讯飞-Sensenova）" class="headerlink" title="sense-nova 提供商（讯飞 Sensenova）"></a>sense-nova 提供商（讯飞 Sensenova）</h3><table>
+<thead>
+<tr>
+<th>模型 ID</th>
+<th>支持图片</th>
+<th>上下文窗口</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>sensenova-6.8-flash-lite</td>
+<td>✅</td>
+<td>未声明</td>
+<td>讯飞主力多模态模型</td>
+</tr>
+<tr>
+<td>sensenova-6.7-flash-lite</td>
+<td>❌</td>
+<td>262144</td>
+<td>纯文本</td>
+</tr>
+<tr>
+<td>sensenova-u1-fast</td>
+<td>❌</td>
+<td>262144</td>
+<td>快速版，纯文本</td>
+</tr>
+<tr>
+<td>sensenova-u1.5-lite</td>
+<td>✅</td>
+<td>262144</td>
+<td>多模态</td>
+</tr>
+<tr>
+<td>deepseek-v4-flash</td>
+<td>✅</td>
+<td>1048576</td>
+<td>DeepSeek V4 系列支持图片</td>
+</tr>
+<tr>
+<td>deepseek-v4-pro</td>
+<td>✅</td>
+<td>1048576</td>
+<td>DeepSeek V4 系列支持图片</td>
+</tr>
+<tr>
+<td>glm-5.2</td>
+<td>✅</td>
+<td>1048576</td>
+<td>智谱 GLM 多模态</td>
+</tr>
+<tr>
+<td>kimi-k3</td>
+<td>❌</td>
+<td>1048576</td>
+<td>月之暗面，代码&#x2F;文本为主</td>
+</tr>
+</tbody></table>
+<h3 id="hcnsec-提供商（HCNSEC-聚合代理）"><a href="#hcnsec-提供商（HCNSEC-聚合代理）" class="headerlink" title="hcnsec 提供商（HCNSEC 聚合代理）"></a>hcnsec 提供商（HCNSEC 聚合代理）</h3><table>
+<thead>
+<tr>
+<th>模型 ID</th>
+<th>支持图片</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>auto</td>
+<td>⚠️ 不确定</td>
+<td>自动路由，不固定模型，声明意义不大</td>
+</tr>
+<tr>
+<td>DeepSeek-V4-Flash</td>
+<td>✅</td>
+<td>同 sense-nova 的 deepseek-v4-flash</td>
+</tr>
+<tr>
+<td>DeepSeek-V4-Pro</td>
+<td>✅</td>
+<td>同 sense-nova 的 deepseek-v4-pro</td>
+</tr>
+<tr>
+<td>glm-5.3-flash</td>
+<td>✅</td>
+<td>智谱新一代多模态</td>
+</tr>
+<tr>
+<td>longcat-2.0</td>
+<td>✅</td>
+<td>LongCat 多模态</td>
+</tr>
+<tr>
+<td>spark-x2.5</td>
+<td>✅</td>
+<td>讯飞星火多模态</td>
+</tr>
+<tr>
+<td>step-3.7-flash</td>
+<td>✅</td>
+<td>Step 系列多模态</td>
+</tr>
+<tr>
+<td>sensenova-6.8-flash-lite</td>
+<td>✅</td>
+<td>同 sense-nova</td>
+</tr>
+<tr>
+<td>sensenova-u1.5-lite</td>
+<td>✅</td>
+<td>同 sense-nova</td>
+</tr>
+<tr>
+<td>kimi-k3</td>
+<td>❌</td>
+<td>纯文本</td>
+</tr>
+<tr>
+<td>MiniMax-M3</td>
+<td>❌</td>
+<td>文本&#x2F;函数调用</td>
+</tr>
+<tr>
+<td>step-explore</td>
+<td>❌</td>
+<td>文本探索类</td>
+</tr>
+<tr>
+<td>step-router-v1</td>
+<td>❌</td>
+<td>路由&#x2F;函数调用类</td>
+</tr>
+<tr>
+<td>Qwen3-Embedding-8B</td>
+<td>❌</td>
+<td>嵌入&#x2F;基座模型</td>
+</tr>
+<tr>
+<td>Qwen3.6-35B-A3B</td>
+<td>❌</td>
+<td>嵌入&#x2F;基座模型</td>
+</tr>
+</tbody></table>
+<h3 id="判定原则"><a href="#判定原则" class="headerlink" title="判定原则"></a>判定原则</h3><ul>
+<li><strong>有 “flash”、”lite”、”v4” 且来自 DeepSeek&#x2F;GLM&#x2F;讯飞星火&#x2F;LongCat 的</strong>，通常支持图片</li>
+<li><strong>有 “embedding”、”router”、”explore”、”fast” 的</strong>，通常是纯文本</li>
+<li><strong>“auto” 这种路由模型</strong>，声明了也没用，因为实际路由到的模型不确定</li>
+<li><strong>拿不准的时候</strong>，加上 <code>input: [text, image]</code> 也没坏处——pi-ai 会在发送时做二次校验，不会造成额外问题</li>
+</ul>
+<hr>
+<h2 id="三、怎么修改配置"><a href="#三、怎么修改配置" class="headerlink" title="三、怎么修改配置"></a>三、怎么修改配置</h2><p>配置文件位置：<code>/root/.dsh/settings.yaml</code></p>
+<h3 id="步骤一：编辑文件"><a href="#步骤一：编辑文件" class="headerlink" title="步骤一：编辑文件"></a>步骤一：编辑文件</h3><p>用 vim 打开：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">vim /root/.dsh/settings.yaml</span><br></pre></td></tr></table></figure>
+
+<h3 id="步骤二：找到目标模型，加上-input-字段"><a href="#步骤二：找到目标模型，加上-input-字段" class="headerlink" title="步骤二：找到目标模型，加上 input 字段"></a>步骤二：找到目标模型，加上 input 字段</h3><p><strong>修改前：</strong></p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="bullet">-</span> <span class="attr">id:</span> <span class="string">sensenova-6.8-flash-lite</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">sensenova-6.8</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>修改后：</strong></p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="bullet">-</span> <span class="attr">id:</span> <span class="string">sensenova-6.8-flash-lite</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">sensenova-6.8</span></span><br><span class="line">  <span class="attr">input:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">text</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">image</span></span><br></pre></td></tr></table></figure>
+
+<p>注意 YAML 缩进要用空格，不要用 tab。</p>
+<h3 id="步骤三：重启-dsh"><a href="#步骤三：重启-dsh" class="headerlink" title="步骤三：重启 dsh"></a>步骤三：重启 dsh</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">kill</span> $(pgrep -f <span class="string">&#x27;dsh web&#x27;</span>)</span><br><span class="line"><span class="built_in">nohup</span> dsh web --no-open --host 127.0.0.1 --port 3080 \</span><br><span class="line">  --trusted-host 43.153.148.187:3081 &amp;</span><br><span class="line"><span class="built_in">sleep</span> 3</span><br><span class="line">ss -tlnp | grep 3080</span><br></pre></td></tr></table></figure>
+
+<h3 id="步骤四：验证"><a href="#步骤四：验证" class="headerlink" title="步骤四：验证"></a>步骤四：验证</h3><p>在 dsh web 里上传一张图片，如果不再报 <code>MODEL_DOES_NOT_SUPPORT_IMAGES</code>，就说明配置生效了。</p>
+<hr>
+<h2 id="四、完整的-settings-yaml-参考"><a href="#四、完整的-settings-yaml-参考" class="headerlink" title="四、完整的 settings.yaml 参考"></a>四、完整的 settings.yaml 参考</h2><p>以下是我修改后的完整配置，供参考：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">agent-default-model:</span></span><br><span class="line">  <span class="attr">provider:</span> <span class="string">sense-nova</span></span><br><span class="line">  <span class="attr">model:</span> <span class="string">sensenova-6.8-flash-lite</span></span><br><span class="line"></span><br><span class="line"><span class="attr">llm-deepseek:</span> &#123;&#125;</span><br><span class="line"></span><br><span class="line"><span class="attr">llm-pi-ai:</span></span><br><span class="line">  <span class="attr">providers:</span></span><br><span class="line">    <span class="attr">sense-nova:</span></span><br><span class="line">      <span class="attr">apiKeyEnv:</span> <span class="string">SENSE_NOVA_API_KEY</span></span><br><span class="line">      <span class="attr">api:</span> <span class="string">openai-completions</span></span><br><span class="line">      <span class="attr">baseURL:</span> <span class="string">https://token.sensenova.cn/v1</span></span><br><span class="line">      <span class="attr">models:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">id:</span> <span class="string">sensenova-6.8-flash-lite</span></span><br><span class="line">          <span class="attr">name:</span> <span class="string">sensenova-6.8</span></span><br><span class="line">          <span class="attr">input:</span></span><br><span class="line">            <span class="bullet">-</span> <span class="string">text</span></span><br><span class="line">            <span class="bullet">-</span> <span class="string">image</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">id:</span> <span class="string">sensenova-6.7-flash-lite</span></span><br><span class="line">          <span class="attr">name:</span> <span class="string">sensenova-6.7-flash-lite</span></span><br><span class="line">          <span class="attr">contextWindow:</span> <span class="number">262144</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">id:</span> <span class="string">deepseek-v4-flash</span></span><br><span class="line">          <span class="attr">name:</span> <span class="string">deepseek-v4-flash</span></span><br><span class="line">          <span class="attr">contextWindow:</span> <span class="number">1048576</span></span><br><span class="line">          <span class="attr">input:</span></span><br><span class="line">            <span class="bullet">-</span> <span class="string">text</span></span><br><span class="line">            <span class="bullet">-</span> <span class="string">image</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">id:</span> <span class="string">glm-5.2</span></span><br><span class="line">          <span class="attr">name:</span> <span class="string">glm-5.2</span></span><br><span class="line">          <span class="attr">contextWindow:</span> <span class="number">1048576</span></span><br><span class="line">          <span class="attr">input:</span></span><br><span class="line">            <span class="bullet">-</span> <span class="string">text</span></span><br><span class="line">            <span class="bullet">-</span> <span class="string">image</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">id:</span> <span class="string">sensenova-u1-fast</span></span><br><span class="line">          <span class="attr">name:</span> <span class="string">sensenova-u1-fast</span></span><br><span class="line">          <span class="attr">contextWindow:</span> <span class="number">262144</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">id:</span> <span class="string">sensenova-u1.5-lite</span></span><br><span class="line">          <span class="attr">name:</span> <span class="string">sensenova-u1.5-lite</span></span><br><span class="line">          <span class="attr">contextWindow:</span> <span class="number">262144</span></span><br><span class="line">          <span class="attr">input:</span></span><br><span class="line">            <span class="bullet">-</span> <span class="string">text</span></span><br><span class="line">            <span class="bullet">-</span> <span class="string">image</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">id:</span> <span class="string">deepseek-v4-pro</span></span><br><span class="line">          <span class="attr">name:</span> <span class="string">deepseek-v4-pro</span></span><br><span class="line">          <span class="attr">contextWindow:</span> <span class="number">1048576</span></span><br><span class="line">          <span class="attr">input:</span></span><br><span class="line">            <span class="bullet">-</span> <span class="string">text</span></span><br><span class="line">            <span class="bullet">-</span> <span class="string">image</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">id:</span> <span class="string">kimi-k3</span></span><br><span class="line">          <span class="attr">name:</span> <span class="string">kimi-k3</span></span><br><span class="line">          <span class="attr">contextWindow:</span> <span class="number">1048576</span></span><br><span class="line"></span><br><span class="line">    <span class="attr">hcnsec:</span></span><br><span class="line">      <span class="attr">apiKeyEnv:</span> <span class="string">HCNSEC_API_KEY</span></span><br><span class="line">      <span class="attr">api:</span> <span class="string">openai-completions</span></span><br><span class="line">      <span class="attr">baseURL:</span> <span class="string">https://api.hcnsec.cn/v1</span></span><br><span class="line">      <span class="attr">models:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">id:</span> <span class="string">auto</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">id:</span> <span class="string">DeepSeek-V4-Flash</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">id:</span> <span class="string">DeepSeek-V4-Pro</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">id:</span> <span class="string">glm-5.3-flash</span></span><br><span class="line">          <span class="attr">input:</span></span><br><span class="line">            <span class="bullet">-</span> <span class="string">text</span></span><br><span class="line">            <span class="bullet">-</span> <span class="string">image</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">id:</span> <span class="string">kimi-k3</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">id:</span> <span class="string">longcat-2.0</span></span><br><span class="line">          <span class="attr">input:</span></span><br><span class="line">            <span class="bullet">-</span> <span class="string">text</span></span><br><span class="line">            <span class="bullet">-</span> <span class="string">image</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">id:</span> <span class="string">MiniMax-M3</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">id:</span> <span class="string">Qwen3-Embedding-8B</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">id:</span> <span class="string">Qwen3.6-35B-A3B</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">id:</span> <span class="string">sensenova-6.8-flash-lite</span></span><br><span class="line">          <span class="attr">input:</span></span><br><span class="line">            <span class="bullet">-</span> <span class="string">text</span></span><br><span class="line">            <span class="bullet">-</span> <span class="string">image</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">id:</span> <span class="string">sensenova-u1.5-lite</span></span><br><span class="line">          <span class="attr">input:</span></span><br><span class="line">            <span class="bullet">-</span> <span class="string">text</span></span><br><span class="line">            <span class="bullet">-</span> <span class="string">image</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">id:</span> <span class="string">spark-x2.5</span></span><br><span class="line">          <span class="attr">input:</span></span><br><span class="line">            <span class="bullet">-</span> <span class="string">text</span></span><br><span class="line">            <span class="bullet">-</span> <span class="string">image</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">id:</span> <span class="string">step-3.7-flash</span></span><br><span class="line">          <span class="attr">input:</span></span><br><span class="line">            <span class="bullet">-</span> <span class="string">text</span></span><br><span class="line">            <span class="bullet">-</span> <span class="string">image</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">id:</span> <span class="string">step-explore</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">id:</span> <span class="string">step-router-v1</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="五、一个容易踩的坑：API-格式"><a href="#五、一个容易踩的坑：API-格式" class="headerlink" title="五、一个容易踩的坑：API 格式"></a>五、一个容易踩的坑：API 格式</h2><p>dsh 的 <code>session.prompt</code> 接口接受的图片格式，和 OpenAI API <strong>不一样</strong>。</p>
+<p><strong>OpenAI 格式（不能用）：</strong></p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span><span class="attr">&quot;type&quot;</span><span class="punctuation">:</span> <span class="string">&quot;image_url&quot;</span><span class="punctuation">,</span> <span class="attr">&quot;image_url&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span><span class="attr">&quot;url&quot;</span><span class="punctuation">:</span> <span class="string">&quot;data:image/jpeg;base64,...&quot;</span><span class="punctuation">&#125;</span><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>dsh 格式（正确）：</strong></p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span><span class="attr">&quot;type&quot;</span><span class="punctuation">:</span> <span class="string">&quot;image&quot;</span><span class="punctuation">,</span> <span class="attr">&quot;mediaType&quot;</span><span class="punctuation">:</span> <span class="string">&quot;image/jpeg&quot;</span><span class="punctuation">,</span> <span class="attr">&quot;data&quot;</span><span class="punctuation">:</span> <span class="string">&quot;&lt;base64&gt;&quot;</span><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p>支持的 mediaType 只有四种：<code>image/png</code>、<code>image/jpeg</code>、<code>image/webp</code>、<code>image/gif</code>。</p>
+<p>用错了格式会报 <code>invalid_union</code> 错误，和 <code>MODEL_DOES_NOT_SUPPORT_IMAGES</code> 长得很像，容易混淆。</p>
+<hr>
+<h2 id="六、总结"><a href="#六、总结" class="headerlink" title="六、总结"></a>六、总结</h2><ol>
+<li><strong>dsh 不自动探测模型能力</strong>，你的 <code>settings.yaml</code> 就是真相源</li>
+<li><strong>想支持图片，必须显式声明</strong> <code>input: [text, image]</code></li>
+<li><strong>不确定某个模型是否支持图片？</strong> 加上声明通常没坏处，pi-ai 会在发送时做二次校验</li>
+<li><strong>API 格式要匹配</strong>，dsh 用 <code>mediaType</code> + <code>data</code>，不是 <code>image_url</code></li>
+</ol>
+<p>如果你在用其他我没列出来的模型，可以把模型 ID 告诉我，我帮你确认要不要加声明。</p>
+
+  </div>
+  
+  
+    <div class="tags">
+      标签: 
+      
+        <a href="/blogs/tags/DeepSeek/">#DeepSeek</a>
+      
+        <a href="/blogs/tags/dsh/">#dsh</a>
+      
+        <a href="/blogs/tags/LLM/">#LLM</a>
+      
+        <a href="/blogs/tags/%E9%85%8D%E7%BD%AE/">#配置</a>
+      
+        <a href="/blogs/tags/%E5%A4%9A%E6%A8%A1%E6%80%81/">#多模态</a>
+      
+        <a href="/blogs/tags/%E6%95%99%E7%A8%8B/">#教程</a>
+      
+    </div>
+  
+</article>
+  </main>
+  
+  <footer>
+    <p>© 2025 创业思考博客</p>
+  </footer>
+</body>
+</html>

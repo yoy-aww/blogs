@@ -27,6 +27,15 @@
   <main>
     
   <article>
+    <h2><a href="/blogs/2026/09/10/dsh-multimodal-model-config-guide/">dsh多模态模型配置指南：哪些模型支持图片，怎么声明</a></h2>
+    <time>2026-09-10 09:09</time>
+    <div class="excerpt">
+      昨天我遇到了一个奇怪的问题：在 dsh（DeepSeek Harness）里给 sensenova-6.8-flash-lite 上传图片，结果报错”Model does not support image input”。后来发现原因很简单——模型的 input 能力没有在配置里声明，pi-ai 默认只认文本。
+修好之后我整理了所有模型的多模态能力，顺便把完整的配置方法写下来，方便以后用到。...
+    </div>
+  </article>
+
+  <article>
     <h2><a href="/blogs/2026/09/10/dsh-image-input-debugging/">一个&#34;不支持图片&#34;的bug，让我翻遍了整个dsh源码</a></h2>
     <time>2026-09-10 08:09</time>
     <div class="excerpt">
