@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>dsh凭证注入与认证机制：密码、Key、Nginx 三层防护 | 创业思考博客</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/blogs/css/style.css">
+<meta name="generator" content="Hexo 8.1.1"></head>
+<body>
+  <header>
+    <h1><a href="/blogs/">创业思考博客</a></h1>
+    <nav>
+      
+        <a href="/blogs/">首页</a>
+      
+        <a href="/blogs/archives">归档</a>
+      
+        <a href="/blogs/about">关于</a>
+      
+    </nav>
+  </header>
+  
+  <main>
+    <article>
+  <h1>dsh凭证注入与认证机制：密码、Key、Nginx 三层防护</h1>
+  <time>2026-09-10</time>
+  
+  <div class="content post-content">
+    <h1 id="dsh凭证注入与认证机制：密码、Key、Nginx-三层防护"><a href="#dsh凭证注入与认证机制：密码、Key、Nginx-三层防护" class="headerlink" title="dsh凭证注入与认证机制：密码、Key、Nginx 三层防护"></a>dsh凭证注入与认证机制：密码、Key、Nginx 三层防护</h1><p>昨天修 dsh 图片输入报错的时候，顺带翻了一遍认证相关的代码。发现 dsh 的凭证管理其实有三层——<strong>浏览器 Basic Auth</strong>、<strong>进程环境变量</strong>、<strong>本地配置文件</strong>，每层各司其职。搞清楚了之后，整个 dsh 的安全边界就清晰了。</p>
+<hr>
+<h2 id="一、第一层：Nginx-Basic-Auth（外网访问网关）"><a href="#一、第一层：Nginx-Basic-Auth（外网访问网关）" class="headerlink" title="一、第一层：Nginx Basic Auth（外网访问网关）"></a>一、第一层：Nginx Basic Auth（外网访问网关）</h2><p>dsh web 默认只监听 <code>127.0.0.1:3080</code>，不暴露到公网。公网访问必须经过 Nginx 反代，而 Nginx 配了 Basic Auth：</p>
+<figure class="highlight nginx"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="section">server</span> &#123;</span><br><span class="line">    <span class="attribute">listen</span> <span class="number">3081</span>;</span><br><span class="line">    <span class="attribute">server_name</span> <span class="number">43.153.148.187</span>;</span><br><span class="line"></span><br><span class="line">    <span class="attribute">auth_basic</span> <span class="string">&quot;dsh&quot;</span>;</span><br><span class="line">    <span class="attribute">auth_basic_user_file</span> /www/server/panel/vhost/nginx/.htpasswd_dsh;</span><br><span class="line"></span><br><span class="line">    <span class="section">location</span> / &#123;</span><br><span class="line">        <span class="attribute">proxy_pass</span> http://127.0.0.1:3080;</span><br><span class="line">        <span class="attribute">proxy_http_version</span> <span class="number">1</span>.<span class="number">1</span>;</span><br><span class="line">        <span class="attribute">proxy_set_header</span> Upgrade <span class="variable">$http_upgrade</span>;</span><br><span class="line">        <span class="attribute">proxy_set_header</span> Connection <span class="string">&quot;upgrade&quot;</span>;</span><br><span class="line">        <span class="attribute">proxy_set_header</span> Host <span class="variable">$http_host</span>;</span><br><span class="line">        <span class="attribute">proxy_set_header</span> X-Real-IP <span class="variable">$remote_addr</span>;</span><br><span class="line">        <span class="attribute">proxy_set_header</span> X-Forwarded-For <span class="variable">$proxy_add_x_forwarded_for</span>;</span><br><span class="line">        <span class="attribute">proxy_set_header</span> X-Forwarded-Proto <span class="variable">$scheme</span>;</span><br><span class="line">        <span class="attribute">proxy_read_timeout</span> <span class="number">3600s</span>;</span><br><span class="line">        <span class="attribute">proxy_send_timeout</span> <span class="number">3600s</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>关键点：</p>
+<ol>
+<li><strong>密码文件</strong>：<code>/www/server/panel/vhost/nginx/.htpasswd_dsh</code>，用户名固定是 <code>dsh</code>，密码是 BT Panel 生成的 apr1 hash</li>
+<li><strong>忘记密码怎么办</strong>：重新生成 htpasswd 文件即可<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">HASH=$(openssl passwd -apr1 <span class="string">&quot;你的新密码&quot;</span>)</span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;dsh:<span class="variable">$&#123;HASH&#125;</span>&quot;</span> &gt; /www/server/panel/vhost/nginx/.htpasswd_dsh</span><br><span class="line"><span class="built_in">chmod</span> 644 /www/server/panel/vhost/nginx/.htpasswd_dsh</span><br></pre></td></tr></table></figure></li>
+<li><strong>目录权限陷阱</strong>：<code>/www/server/panel/vhost/nginx/</code> 默认是 700，nginx worker（www用户）无法读取。需要：<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">chmod</span> 711 /www/server/panel/vhost /www/server/panel/vhost/nginx</span><br></pre></td></tr></table></figure></li>
+<li><strong>crypto.randomUUID polyfill</strong>：dsh 的前端用到了 <code>crypto.randomUUID()</code>，老版本浏览器不支持。Nginx 里配了一段 JS 注入：<figure class="highlight nginx"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="section">location</span> = /dsh-polyfill.js &#123;</span><br><span class="line">    <span class="attribute">default_type</span> application/javascript;</span><br><span class="line">    <span class="attribute">charset</span> utf-<span class="number">8</span>;</span><br><span class="line">    <span class="attribute">return</span> <span class="number">200</span> <span class="string">&#x27;if(typeof crypto!==\&quot;undefined\&quot;&amp;&amp;!crypto.randomUUID)&#123;...&#125;&#x27;</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+然后用 <code>sub_filter</code> 注入到所有 HTML 的 <code>&lt;/head&gt;</code> 前面。</li>
+</ol>
+<hr>
+<h2 id="二、第二层：密码文件（dsh-web-登录凭证）"><a href="#二、第二层：密码文件（dsh-web-登录凭证）" class="headerlink" title="二、第二层：密码文件（dsh web 登录凭证）"></a>二、第二层：密码文件（dsh web 登录凭证）</h2><p>Nginx 那层只是外网访问的门卫。dsh web 自己也有登录机制——存在 <code>/root/dsh-web-password.txt</code> 里：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">yoy-3081!dsh</span><br></pre></td></tr></table></figure>
+
+<p>这个文件是什么？dsh 前端用这个用户名（<code>dsh</code>）+ 密码来构建 Basic Auth header，发给后端 API。我们的调试代码里就是这样用的：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">password = <span class="string">&#x27;yoy-3081!dsh&#x27;</span></span><br><span class="line">credentials = base64.b64encode(<span class="string">f&#x27;dsh:<span class="subst">&#123;password&#125;</span>&#x27;</span>.encode()).decode()</span><br><span class="line">req = urllib.request.Request(</span><br><span class="line">    <span class="string">&#x27;http://127.0.0.1:3080/api/settings.describe&#x27;</span>,</span><br><span class="line">    headers=&#123;<span class="string">&#x27;Authorization&#x27;</span>: <span class="string">f&#x27;Basic <span class="subst">&#123;credentials&#125;</span>&#x27;</span>&#125;</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+
+<p>所以实际上有<strong>两个密码</strong>：</p>
+<ul>
+<li>Nginx 的 <code>.htpasswd_dsh</code>：拦的是 HTTP 层，没通过直接 401</li>
+<li><code>/root/dsh-web-password.txt</code>：是 dsh 应用层认的，通过 Nginx 后还要对这个</li>
+</ul>
+<p>两层密码可以不同，也可以相同。我的环境里恰好是一样的。</p>
+<hr>
+<h2 id="三、第三层：API-Key-的环境变量注入"><a href="#三、第三层：API-Key-的环境变量注入" class="headerlink" title="三、第三层：API Key 的环境变量注入"></a>三、第三层：API Key 的环境变量注入</h2><p>这是最关键的一层——dsh 怎么拿到 Sensenova &#x2F; HCNSEC 的 API Key？</p>
+<p>答案：<strong>进程环境变量</strong>，不是直接从配置文件读取。</p>
+<h3 id="配置文件里只写变量名"><a href="#配置文件里只写变量名" class="headerlink" title="配置文件里只写变量名"></a>配置文件里只写变量名</h3><p><code>/root/.dsh/settings.yaml</code> 里写的是：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">llm-pi-ai:</span></span><br><span class="line">  <span class="attr">providers:</span></span><br><span class="line">    <span class="attr">sense-nova:</span></span><br><span class="line">      <span class="attr">apiKeyEnv:</span> <span class="string">SENSE_NOVA_API_KEY</span>   <span class="comment"># ← 只写变量名</span></span><br><span class="line">      <span class="attr">baseURL:</span> <span class="string">https://token.sensenova.cn/v1</span></span><br><span class="line">      <span class="string">...</span></span><br><span class="line">    <span class="attr">hcnsec:</span></span><br><span class="line">      <span class="attr">apiKeyEnv:</span> <span class="string">HCNSEC_API_KEY</span>       <span class="comment"># ← 只写变量名</span></span><br><span class="line">      <span class="attr">baseURL:</span> <span class="string">https://api.hcnsec.cn/v1</span></span><br><span class="line">      <span class="string">...</span></span><br></pre></td></tr></table></figure>
+
+<p>注意是 <code>apiKeyEnv</code>，不是 <code>apiKey</code>。告诉 pi-ai：”去环境变量里找这个 key”。</p>
+<h3 id="实际的-Key-存在哪里？"><a href="#实际的-Key-存在哪里？" class="headerlink" title="实际的 Key 存在哪里？"></a>实际的 Key 存在哪里？</h3><p>两个地方：</p>
+<p><strong>1. 凭证文件</strong>（供 dsh 启动时注入）</p>
+<p><code>/root/.dsh/.credentials.yaml</code>：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">version:</span> <span class="number">1</span></span><br><span class="line"><span class="attr">refs:</span></span><br><span class="line">  <span class="attr">DEEPSEEK_API_KEY:</span> <span class="string">sk-hhh...7yYs</span></span><br><span class="line">  <span class="attr">SENSE_NOVA_API_KEY:</span> <span class="string">sk-hhh...7yYs</span></span><br><span class="line">  <span class="attr">HCNSEC_API_KEY:</span> <span class="string">sk-HcU...8aG5</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>2. 进程环境</strong>（实际运行时生效）</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 查看 dsh 进程的完整环境变量</span></span><br><span class="line"><span class="built_in">cat</span> /proc/$(pgrep -f <span class="string">&#x27;dsh web&#x27;</span> | <span class="built_in">head</span> -1)/environ | <span class="built_in">tr</span> <span class="string">&#x27;\0&#x27;</span> <span class="string">&#x27;\n&#x27;</span> | grep API_KEY</span><br></pre></td></tr></table></figure>
+
+<p>输出：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">SENSENOVA_API_KEY=sk-hhh...7yYs</span><br><span class="line">HCNSEC_API_KEY=sk-HcU...8aG5</span><br></pre></td></tr></table></figure>
+
+<p>注意：<code>SENSENOVA_API_KEY</code>（没有下划线）和 settings.yaml 里写的 <code>SENSE_NOVA_API_KEY</code>（有下划线）<strong>不完全一致</strong>。这说明 dsh 在启动时对环境变量名做了规范化处理——可能是去掉了下划线，或者两边都支持。</p>
+<h3 id="为什么不用明文写在-settings-yaml-里？"><a href="#为什么不用明文写在-settings-yaml-里？" class="headerlink" title="为什么不用明文写在 settings.yaml 里？"></a>为什么不用明文写在 settings.yaml 里？</h3><p>安全考量：</p>
+<ul>
+<li>settings.yaml 可能进了 git（虽然 .gitignore 通常排除，但有人忘加）</li>
+<li>环境变量不在文件系统上，进程退出后就不存在</li>
+<li>可以用容器、systemd EnvironmentFile、或者启动脚本控制注入时机</li>
+</ul>
+<hr>
+<h2 id="四、Hermes-Agent-和-dsh-的-Key-是两套"><a href="#四、Hermes-Agent-和-dsh-的-Key-是两套" class="headerlink" title="四、Hermes Agent 和 dsh 的 Key 是两套"></a>四、Hermes Agent 和 dsh 的 Key 是两套</h2><p>这里容易混淆：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Hermes Agent</th>
+<th>dsh</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>配置文件</td>
+<td><code>/root/.hermes/config.yaml</code></td>
+<td><code>/root/.dsh/settings.yaml</code></td>
+</tr>
+<tr>
+<td>API Key 位置</td>
+<td>直接写在 config 里</td>
+<td>环境变量，从 .credentials.yaml 注入</td>
+</tr>
+<tr>
+<td>sensenova key</td>
+<td><code>sk-HcU...8aG5</code> (hcnsec provider)</td>
+<td><code>sk-hhh...7yYs</code> (sense-nova provider)</td>
+</tr>
+</tbody></table>
+<p>两套 Key 不同，说明用了不同的账号或者不同的接入点。Hermes Agent 走的是 hcnsec 聚合代理，dsh 直接走 sensenova 官方接口。</p>
+<hr>
+<h2 id="五、启动参数里的-–trusted-host"><a href="#五、启动参数里的-–trusted-host" class="headerlink" title="五、启动参数里的 –trusted-host"></a>五、启动参数里的 –trusted-host</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">nohup</span> dsh web --no-open --host 127.0.0.1 --port 3080 \</span><br><span class="line">  --trusted-host 43.153.148.187:3081 \</span><br><span class="line">  --trusted-host 43.153.148.187 &amp;</span><br></pre></td></tr></table></figure>
+
+<p><code>--trusted-host</code> 的作用：告诉 dsh 哪些外部地址是可信的。这影响 WebSocket 连接和跨域策略。</p>
+<p>如果不加这个参数，从公网 IP 访问时，前端会判定非回环地址，部分功能（比如 Settings 页面）会被禁用——这就是 skill 里提到的 “加载提供方目录失败” 问题。</p>
+<hr>
+<h2 id="六、完整的认证流程"><a href="#六、完整的认证流程" class="headerlink" title="六、完整的认证流程"></a>六、完整的认证流程</h2><p>用户从浏览器访问 <code>http://43.153.148.187:3081</code> 到发出第一个 API 请求，经历了这几步：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">1. 浏览器输入 URL</span><br><span class="line">   ↓</span><br><span class="line">2. Nginx 拦截，返回 401 + WWW-Authenticate</span><br><span class="line">   ↓</span><br><span class="line">3. 浏览器弹出登录框，用户输入 dsh / yoy-3081!dsh</span><br><span class="line">   ↓</span><br><span class="line">4. Nginx 验证 .htpasswd_dsh，通过，转发到 127.0.0.1:3080</span><br><span class="line">   ↓</span><br><span class="line">5. dsh 前端用同样的凭据构建 Authorization header</span><br><span class="line">   ↓</span><br><span class="line">6. 前端请求 /api/settings.describe，携带 Basic Auth</span><br><span class="line">   ↓</span><br><span class="line">7. dsh 后端验证通过，返回 settings</span><br><span class="line">   ↓</span><br><span class="line">8. dsh 从环境变量读取 SENSE_NOVA_API_KEY / HCNSEC_API_KEY</span><br><span class="line">   ↓</span><br><span class="line">9. 实际调用 Sensenova API（带上自己的 Bearer Token）</span><br></pre></td></tr></table></figure>
+
+<p>每一层都在验证身份，但目的不同：</p>
+<ul>
+<li>Nginx Basic Auth：防止未授权访问（运维安全）</li>
+<li>dsh 应用层 Auth：标识当前用户（功能隔离）</li>
+<li>环境变量里的 API Key：标识对上游模型的访问权（计费&#x2F;配额）</li>
+</ul>
+<hr>
+<h2 id="七、常见问题排查"><a href="#七、常见问题排查" class="headerlink" title="七、常见问题排查"></a>七、常见问题排查</h2><h3 id="问题1：忘记-dsh-web-密码"><a href="#问题1：忘记-dsh-web-密码" class="headerlink" title="问题1：忘记 dsh web 密码"></a>问题1：忘记 dsh web 密码</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 查看当前密码文件</span></span><br><span class="line"><span class="built_in">cat</span> /root/dsh-web-password.txt</span><br><span class="line"></span><br><span class="line"><span class="comment"># 重新设置（和应用层密码一致即可）</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;新密码&quot;</span> &gt; /root/dsh-web-password.txt</span><br></pre></td></tr></table></figure>
+
+<h3 id="问题2：Nginx-401-怎么重置"><a href="#问题2：Nginx-401-怎么重置" class="headerlink" title="问题2：Nginx 401 怎么重置"></a>问题2：Nginx 401 怎么重置</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 生成新密码（会提示输入两次）</span></span><br><span class="line">htpasswd -c /www/server/panel/vhost/nginx/.htpasswd_dsh dsh</span><br><span class="line"></span><br><span class="line"><span class="comment"># 如果没有 htpasswd 工具</span></span><br><span class="line">HASH=$(openssl passwd -apr1 <span class="string">&quot;你的密码&quot;</span>)</span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;dsh:<span class="variable">$&#123;HASH&#125;</span>&quot;</span> &gt; /www/server/panel/vhost/nginx/.htpasswd_dsh</span><br><span class="line"><span class="built_in">chmod</span> 644 /www/server/panel/vhost/nginx/.htpasswd_dsh</span><br></pre></td></tr></table></figure>
+
+<h3 id="问题3：API-Key-失效了"><a href="#问题3：API-Key-失效了" class="headerlink" title="问题3：API Key 失效了"></a>问题3：API Key 失效了</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 1. 更新凭证文件</span></span><br><span class="line">vim /root/.dsh/.credentials.yaml</span><br><span class="line"></span><br><span class="line"><span class="comment"># 2. 更新环境变量（重启 dsh 时自动注入）</span></span><br><span class="line"><span class="comment"># 不需要手动 export，dsh 启动时会读 .credentials.yaml</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 3. 重启 dsh</span></span><br><span class="line"><span class="built_in">kill</span> $(pgrep -f <span class="string">&#x27;dsh web&#x27;</span>)</span><br><span class="line"><span class="built_in">nohup</span> dsh web --no-open --host 127.0.0.1 --port 3080 \</span><br><span class="line">  --trusted-host 43.153.148.187:3081 &amp;</span><br></pre></td></tr></table></figure>
+
+<hr>
+<p><strong>写在最后</strong></p>
+<p>dsh 的安全设计是典型的”纵深防御”：Nginx 在外、应用 Auth 在中、API Key 在内。每一层解决不同维度的问题，组合起来既安全又灵活。</p>
+<p>理解了这个分层，以后排查”认证相关”的问题就有方向了——先问自己：是哪个层面的认证出了问题？</p>
+
+  </div>
+  
+  
+    <div class="tags">
+      标签: 
+      
+        <a href="/blogs/tags/DeepSeek/">#DeepSeek</a>
+      
+        <a href="/blogs/tags/dsh/">#dsh</a>
+      
+        <a href="/blogs/tags/%E9%85%8D%E7%BD%AE/">#配置</a>
+      
+        <a href="/blogs/tags/%E5%AE%89%E5%85%A8/">#安全</a>
+      
+        <a href="/blogs/tags/Nginx/">#Nginx</a>
+      
+        <a href="/blogs/tags/%E6%95%99%E7%A8%8B/">#教程</a>
+      
+    </div>
+  
+</article>
+  </main>
+  
+  <footer>
+    <p>© 2025 创业思考博客</p>
+  </footer>
+</body>
+</html>

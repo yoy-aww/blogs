@@ -47,6 +47,27 @@ AI 说：”这份日志和上次一模一样，没有新...
   </article>
 
   <article>
+    <h2><a href="/blogs/2026/09/10/dsh-model-selection-routing/">dsh模型选择与Session路由：一层一层的优先级</a></h2>
+    <time>2026-09-10 11:09</time>
+    <div class="excerpt">
+      昨天修图片输入的时候，我在源码里看到了一段有趣的逻辑——模型选择不是一次性决定的，而是每读一次都重新计算，优先级从三个来源叠加。这种设计让 per-session 覆盖变得简单又可靠。
+
+一、模型选择的三层优先级在 dsh-host-apiproxy/lib/types/api-proxy.js 里，有一个 selectionFor(agent) 函数，它返回一个响应式对象：
+1234567...
+    </div>
+  </article>
+
+  <article>
+    <h2><a href="/blogs/2026/09/10/dsh-credentials-auth-guide/">dsh凭证注入与认证机制：密码、Key、Nginx 三层防护</a></h2>
+    <time>2026-09-10 10:09</time>
+    <div class="excerpt">
+      昨天修 dsh 图片输入报错的时候，顺带翻了一遍认证相关的代码。发现 dsh 的凭证管理其实有三层——浏览器 Basic Auth、进程环境变量、本地配置文件，每层各司其职。搞清楚了之后，整个 dsh 的安全边界就清晰了。
+
+一、第一层：Nginx Basic Auth（外网访问网关）dsh web 默认只监听 127.0.0.1:3080，不暴露到公网。公网访问必须经过 Nginx 反代，...
+    </div>
+  </article>
+
+  <article>
     <h2><a href="/blogs/2026/09/10/dsh-multimodal-model-config-guide/">dsh多模态模型配置指南：哪些模型支持图片，怎么声明</a></h2>
     <time>2026-09-10 09:09</time>
     <div class="excerpt">
@@ -157,39 +178,6 @@ AI 说：”这份日志和上次一模一样，没有新...
 这篇文章就把我踩过的坑和最终沉淀下来的用法整理出来，给同样想在自己电脑上跑大模型的你。
 为什么”显存大于模型文件”还不够这是新手最容易踩的直觉误区：模型文件的大小，不等于运行时占的显存。
 跑模型时，...
-    </div>
-  </article>
-
-  <article>
-    <h2><a href="/blogs/2026/08/20/deepseek-r1-ollama-local-deployment-guide/">DeepSeek R1 本地部署实操指南：RTX 3060 12GB + Ollama 全流程</a></h2>
-    <time>2026-08-20 16:08</time>
-    <div class="excerpt">
-      动机上周写了 DeepSeek 系列文章，很多朋友问同一个问题：能不能在自己电脑上跑？答案是可以的——前提是选对模型、用对工具。
-这篇文章以我身边的配置为基准——RTX 3060 12GB、Linux 系统——把整个流程走一遍，从硬件要求到实际运行，全部是实操细节，不是空谈。
-硬件要求先给一个明确的对照表：
-
-
-
-配置项
-推荐值
-最低值
-备注
-
-
-
-GPU
-12GB 显存
-4GB 显存
-7B...
-    </div>
-  </article>
-
-  <article>
-    <h2><a href="/blogs/2026/08/20/deepseek-harness-vs-hermes-agent/">DeepSeek Harness 与 Hermes Agent：引擎与整车的区别</a></h2>
-    <time>2026-08-20 15:08</time>
-    <div class="excerpt">
-      一个经常被问到的问题刚写完 DeepSeek 系列文章，一个朋友问我：”你们说的 DeepSeek Harness，和 Hermes Agent 那个是不是类似的东西？我搞糊涂了。”
-这个问题问得特别好。事实上，很多刚开始接触 AI 工具的人都会把这两个东西混为一谈——它们都和”AI 帮你做事”有关，名字听起来也差不多高大上。但实际上，它们是不同层面的东西，而且更重要的是，它们是互补的，不是...
     </div>
   </article>
 

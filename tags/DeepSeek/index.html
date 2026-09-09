@@ -27,6 +27,27 @@
   <main>
     
   <article>
+    <h2><a href="/blogs/2026/09/10/dsh-model-selection-routing/">dsh模型选择与Session路由：一层一层的优先级</a></h2>
+    <time>2026-09-10 11:09</time>
+    <div class="excerpt">
+      昨天修图片输入的时候，我在源码里看到了一段有趣的逻辑——模型选择不是一次性决定的，而是每读一次都重新计算，优先级从三个来源叠加。这种设计让 per-session 覆盖变得简单又可靠。
+
+一、模型选择的三层优先级在 dsh-host-apiproxy/lib/types/api-proxy.js 里，有一个 selectionFor(agent) 函数，它返回一个响应式对象：
+1234567...
+    </div>
+  </article>
+
+  <article>
+    <h2><a href="/blogs/2026/09/10/dsh-credentials-auth-guide/">dsh凭证注入与认证机制：密码、Key、Nginx 三层防护</a></h2>
+    <time>2026-09-10 10:09</time>
+    <div class="excerpt">
+      昨天修 dsh 图片输入报错的时候，顺带翻了一遍认证相关的代码。发现 dsh 的凭证管理其实有三层——浏览器 Basic Auth、进程环境变量、本地配置文件，每层各司其职。搞清楚了之后，整个 dsh 的安全边界就清晰了。
+
+一、第一层：Nginx Basic Auth（外网访问网关）dsh web 默认只监听 127.0.0.1:3080，不暴露到公网。公网访问必须经过 Nginx 反代，...
+    </div>
+  </article>
+
+  <article>
     <h2><a href="/blogs/2026/09/10/dsh-multimodal-model-config-guide/">dsh多模态模型配置指南：哪些模型支持图片，怎么声明</a></h2>
     <time>2026-09-10 09:09</time>
     <div class="excerpt">
@@ -123,25 +144,11 @@ DeepSeek 的一个巨大优势是它的开源策略。V3、R1、V3.2、V4-Flash 
     </div>
   </article>
 
-  <article>
-    <h2><a href="/blogs/2026/08/20/deepseek-harness-02-api-practical-guide/">DeepSeek 开发者实战：API 调用、思考模式与成本优化</a></h2>
-    <time>2026-08-20 10:08</time>
-    <div class="excerpt">
-      一个真实的困扰上周我在给朋友调试一个 DeepSeek API 的调用时，他困惑地问我：”为什么我用了 V4-Pro 反而比 V4-Flash 慢了好几倍，而且输出还特别长？”
-我一看他的代码——他开启了两层”思考”：API 层面的 enable_thinking: true，又在 prompt 里写了”请逐步推理并解释你的思考过程”。结果是模型先在内部做了长时间的 reasoning，然后...
-    </div>
-  </article>
-
-  <article>
-    <h2><a href="/blogs/2026/08/20/deepseek-harness-01-architecture/">DeepSeek 技术架构全景：从 V3 到 V4 的演进与核心创新</a></h2>
-    <time>2026-08-20 09:08</time>
-    <div class="excerpt">
-      为什么值得花时间理解 DeepSeek 的架构2026 年 8 月，当我打开 Hugging Face 的排行榜时，DeepSeek 家族的身影几乎占据了整个视野。DeepSeek-V3 下载量超过 105 万，DeepSeek-V4-Flash 超过 188 万，DeepSeek-R1 更是突破 690 万——这还不包括那些基于它们蒸馏出来的小模型。
-作为一个每天要和 AI 打交道的程序员...
-    </div>
-  </article>
 
 
+  <nav class="pagination">
+    <span class="page-number current">1</span><a class="page-number" href="/blogs/tags/DeepSeek/page/2/">2</a><a class="extend next" rel="next" href="/blogs/tags/DeepSeek/page/2/">下一页 →</a>
+  </nav>
 
   </main>
   

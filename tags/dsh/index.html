@@ -27,6 +27,27 @@
   <main>
     
   <article>
+    <h2><a href="/blogs/2026/09/10/dsh-model-selection-routing/">dsh模型选择与Session路由：一层一层的优先级</a></h2>
+    <time>2026-09-10 11:09</time>
+    <div class="excerpt">
+      昨天修图片输入的时候，我在源码里看到了一段有趣的逻辑——模型选择不是一次性决定的，而是每读一次都重新计算，优先级从三个来源叠加。这种设计让 per-session 覆盖变得简单又可靠。
+
+一、模型选择的三层优先级在 dsh-host-apiproxy/lib/types/api-proxy.js 里，有一个 selectionFor(agent) 函数，它返回一个响应式对象：
+1234567...
+    </div>
+  </article>
+
+  <article>
+    <h2><a href="/blogs/2026/09/10/dsh-credentials-auth-guide/">dsh凭证注入与认证机制：密码、Key、Nginx 三层防护</a></h2>
+    <time>2026-09-10 10:09</time>
+    <div class="excerpt">
+      昨天修 dsh 图片输入报错的时候，顺带翻了一遍认证相关的代码。发现 dsh 的凭证管理其实有三层——浏览器 Basic Auth、进程环境变量、本地配置文件，每层各司其职。搞清楚了之后，整个 dsh 的安全边界就清晰了。
+
+一、第一层：Nginx Basic Auth（外网访问网关）dsh web 默认只监听 127.0.0.1:3080，不暴露到公网。公网访问必须经过 Nginx 反代，...
+    </div>
+  </article>
+
+  <article>
     <h2><a href="/blogs/2026/09/10/dsh-multimodal-model-config-guide/">dsh多模态模型配置指南：哪些模型支持图片，怎么声明</a></h2>
     <time>2026-09-10 09:09</time>
     <div class="excerpt">

@@ -27,6 +27,17 @@
   <main>
     
   <article>
+    <h2><a href="/blogs/2026/09/10/dsh-model-selection-routing/">dsh模型选择与Session路由：一层一层的优先级</a></h2>
+    <time>2026-09-10 11:09</time>
+    <div class="excerpt">
+      昨天修图片输入的时候，我在源码里看到了一段有趣的逻辑——模型选择不是一次性决定的，而是每读一次都重新计算，优先级从三个来源叠加。这种设计让 per-session 覆盖变得简单又可靠。
+
+一、模型选择的三层优先级在 dsh-host-apiproxy/lib/types/api-proxy.js 里，有一个 selectionFor(agent) 函数，它返回一个响应式对象：
+1234567...
+    </div>
+  </article>
+
+  <article>
     <h2><a href="/blogs/2026/09/10/dsh-image-input-debugging/">一个&#34;不支持图片&#34;的bug，让我翻遍了整个dsh源码</a></h2>
     <time>2026-09-10 08:09</time>
     <div class="excerpt">

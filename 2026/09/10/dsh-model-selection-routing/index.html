@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>dsh模型选择与Session路由：一层一层的优先级 | 创业思考博客</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/blogs/css/style.css">
+<meta name="generator" content="Hexo 8.1.1"></head>
+<body>
+  <header>
+    <h1><a href="/blogs/">创业思考博客</a></h1>
+    <nav>
+      
+        <a href="/blogs/">首页</a>
+      
+        <a href="/blogs/archives">归档</a>
+      
+        <a href="/blogs/about">关于</a>
+      
+    </nav>
+  </header>
+  
+  <main>
+    <article>
+  <h1>dsh模型选择与Session路由：一层一层的优先级</h1>
+  <time>2026-09-10</time>
+  
+  <div class="content post-content">
+    <h1 id="dsh模型选择与Session路由：一层一层的优先级"><a href="#dsh模型选择与Session路由：一层一层的优先级" class="headerlink" title="dsh模型选择与Session路由：一层一层的优先级"></a>dsh模型选择与Session路由：一层一层的优先级</h1><p>昨天修图片输入的时候，我在源码里看到了一段有趣的逻辑——模型选择不是一次性决定的，而是<strong>每读一次都重新计算</strong>，优先级从三个来源叠加。这种设计让 per-session 覆盖变得简单又可靠。</p>
+<hr>
+<h2 id="一、模型选择的三层优先级"><a href="#一、模型选择的三层优先级" class="headerlink" title="一、模型选择的三层优先级"></a>一、模型选择的三层优先级</h2><p>在 <code>dsh-host-apiproxy/lib/types/api-proxy.js</code> 里，有一个 <code>selectionFor(agent)</code> 函数，它返回一个响应式对象：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">function</span> <span class="title function_">selectionFor</span>(<span class="params">agent</span>) &#123;</span><br><span class="line">    <span class="keyword">const</span> installed = selections.<span class="title function_">get</span>(agent);</span><br><span class="line">    <span class="keyword">if</span> (installed !== <span class="literal">undefined</span>) <span class="keyword">return</span> installed;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">let</span> picked;  <span class="comment">// ← 运行时覆盖值</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">const</span> selection = &#123;</span><br><span class="line">        <span class="keyword">get</span> <span class="title function_">current</span>() &#123;</span><br><span class="line">            <span class="comment">// 第1优先：运行时手动设置的覆盖值</span></span><br><span class="line">            <span class="keyword">if</span> (picked !== <span class="literal">undefined</span>) <span class="keyword">return</span> picked;</span><br><span class="line"></span><br><span class="line">            <span class="comment">// 第2优先：session 日志里记录的 config</span></span><br><span class="line">            <span class="keyword">const</span> logged = agent.<span class="property">session</span>.<span class="title function_">requestHeader</span>()?.<span class="property">config</span>;</span><br><span class="line">            <span class="keyword">if</span> (logged === <span class="literal">undefined</span>)</span><br><span class="line">                <span class="keyword">return</span> defaults.<span class="title function_">defaultModelSelection</span>();</span><br><span class="line"></span><br><span class="line">            <span class="keyword">return</span> &#123;</span><br><span class="line">                <span class="attr">provider</span>: logged.<span class="property">provider</span>,</span><br><span class="line">                <span class="attr">model</span>: logged.<span class="property">model</span>,</span><br><span class="line">                ...(logged.<span class="property">reasoningEffort</span> === <span class="literal">undefined</span></span><br><span class="line">                    ? &#123;&#125;</span><br><span class="line">                    : &#123; <span class="attr">reasoningEffort</span>: logged.<span class="property">reasoningEffort</span> &#125;),</span><br><span class="line">            &#125;;</span><br><span class="line">        &#125;,</span><br><span class="line">        <span class="keyword">set</span> <span class="title function_">current</span>(<span class="params">next</span>) &#123;</span><br><span class="line">            picked = next;</span><br><span class="line">        &#125;,</span><br><span class="line">        <span class="attr">assembled</span>: <span class="literal">undefined</span>,</span><br><span class="line">    &#125;;</span><br><span class="line"></span><br><span class="line">    <span class="title function_">installModelSelection</span>(agent.<span class="property">ctx</span>, selection);</span><br><span class="line">    selections.<span class="title function_">set</span>(agent, selection);</span><br><span class="line">    <span class="keyword">return</span> selection;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>三层优先级：</p>
+<table>
+<thead>
+<tr>
+<th>优先级</th>
+<th>来源</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1（最高）</td>
+<td><code>picked</code>（运行时覆盖）</td>
+<td>用户在 UI 里选了某个模型，临时覆盖当前 session</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>agent.session.requestHeader()?.config</code></td>
+<td>session 日志里持久化的 provider&#x2F;model</td>
+</tr>
+<tr>
+<td>3（最低）</td>
+<td><code>defaults.defaultModelSelection()</code></td>
+<td>settings.yaml 里的 <code>agent-default-model</code></td>
+</tr>
+</tbody></table>
+<p><strong>关键设计</strong>：每次读 <code>.current</code> 都重新计算，不会缓存。这意味着你在 UI 里切换模型，下一秒就能生效——不需要重启。</p>
+<hr>
+<h2 id="二、defaultModelSelection-从哪来？"><a href="#二、defaultModelSelection-从哪来？" class="headerlink" title="二、defaultModelSelection 从哪来？"></a>二、defaultModelSelection 从哪来？</h2><figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> <span class="title function_">agentOptions</span> = (<span class="params"></span>) =&gt; &#123;</span><br><span class="line">    <span class="keyword">const</span> &#123; provider, model &#125; = defaults.<span class="title function_">defaultModelSelection</span>();</span><br><span class="line">    <span class="keyword">return</span> &#123; provider, model &#125;;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p><code>defaults</code> 来自 dsh 启动时加载的 settings：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// dsh-host-apiproxy/lib/index.js</span></span><br><span class="line"><span class="attr">defaultModelSelection</span>: <span class="function">() =&gt;</span> ctx.<span class="property">agentDefaultModel</span>.<span class="title function_">currentSelection</span>(),</span><br></pre></td></tr></table></figure>
+
+<p>最终读的是 <code>/root/.dsh/settings.yaml</code> 里的：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">agent-default-model:</span></span><br><span class="line">  <span class="attr">provider:</span> <span class="string">sense-nova</span></span><br><span class="line">  <span class="attr">model:</span> <span class="string">sensenova-6.8-flash-lite</span></span><br></pre></td></tr></table></figure>
+
+<p>所以<strong>全局默认模型</strong>就这一个配置决定。</p>
+<hr>
+<h2 id="三、Session-级别的持久化"><a href="#三、Session-级别的持久化" class="headerlink" title="三、Session 级别的持久化"></a>三、Session 级别的持久化</h2><p>每创建一个 session，dsh 会在 session 日志里记录当时的 model selection：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 当用户创建或恢复一个 session 时</span></span><br><span class="line">agent.<span class="property">session</span>.<span class="title function_">setRequestHeader</span>(&#123;</span><br><span class="line">    <span class="attr">config</span>: &#123;</span><br><span class="line">        <span class="attr">provider</span>: selection.<span class="property">provider</span>,</span><br><span class="line">        <span class="attr">model</span>: selection.<span class="property">model</span>,</span><br><span class="line">        <span class="attr">reasoningEffort</span>: selection.<span class="property">reasoningEffort</span>,</span><br><span class="line">    &#125;</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+
+<p>这个 header 会持久化到 session 的 JSONL 日志里。下次恢复这个 session 时：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> logged = agent.<span class="property">session</span>.<span class="title function_">requestHeader</span>()?.<span class="property">config</span>;</span><br><span class="line"><span class="comment">// logged = &#123; provider: &quot;sense-nova&quot;, model: &quot;sensenova-6.8-flash-lite&quot; &#125;</span></span><br></pre></td></tr></table></figure>
+
+<p>dsh 会读出来，作为第二优先级的来源。</p>
+<p><strong>这意味着什么？</strong></p>
+<p>你的每个 session 都有自己的”默认模型”。新建 session 时会继承上次用的模型，不会每次都回到全局默认。这在多模型场景下很实用——写代码的 session 用 DeepSeek，聊天的 session 用 GLM，互不干扰。</p>
+<hr>
+<h2 id="四、per-session-覆盖怎么用？"><a href="#四、per-session-覆盖怎么用？" class="headerlink" title="四、per-session 覆盖怎么用？"></a>四、per-session 覆盖怎么用？</h2><p>当你在 dsh web UI 的 Settings 页面选了一个不同的模型，实际上是调用了：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">selection.<span class="property">current</span> = &#123;</span><br><span class="line">    <span class="attr">provider</span>: <span class="string">&#x27;hcnsec&#x27;</span>,</span><br><span class="line">    <span class="attr">model</span>: <span class="string">&#x27;glm-5.3-flash&#x27;</span>,</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>这会设置 <code>picked</code> 变量（第一优先级）。之后的所有请求都会用这个 provider&#x2F;model，直到你：</p>
+<ul>
+<li>再次切换（覆盖 <code>picked</code>）</li>
+<li>清除覆盖（把 <code>picked</code> 设为 undefined）</li>
+</ul>
+<p>在源码里，清除覆盖发生在 <code>unmountPresetFor</code> 里——卸载 preset 时清除 per-session 的临时选择。</p>
+<hr>
+<h2 id="五、图片检查时用的是哪一层？"><a href="#五、图片检查时用的是哪一层？" class="headerlink" title="五、图片检查时用的是哪一层？"></a>五、图片检查时用的是哪一层？</h2><p>回到昨天的 bug。图片 admission 检查发生在 <code>session.prompt</code> 处理里：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> current = <span class="title function_">selectionFor</span>(agent).<span class="property">current</span>;</span><br><span class="line"><span class="keyword">const</span> modelInfo = <span class="keyword">await</span> ctx.<span class="property">llm</span>.<span class="title function_">resolveModelInfo</span>(current.<span class="property">provider</span>, current.<span class="property">model</span>);</span><br><span class="line"><span class="keyword">if</span> (modelInfo.<span class="property">inputModalities</span> !== <span class="literal">undefined</span> &amp;&amp; !modelInfo.<span class="property">inputModalities</span>.<span class="title function_">includes</span>(<span class="string">&#x27;image&#x27;</span>)) &#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="title function_">err</span>(request, &#123;</span><br><span class="line">        <span class="attr">code</span>: <span class="string">&#x27;attachment-error&#x27;</span>,</span><br><span class="line">        <span class="attr">message</span>: <span class="string">`Model &quot;<span class="subst">$&#123;current.model&#125;</span>&quot; does not support image input.`</span>,</span><br><span class="line">        <span class="attr">details</span>: &#123; <span class="attr">reason</span>: <span class="string">&#x27;MODEL_DOES_NOT_SUPPORT_IMAGES&#x27;</span> &#125;,</span><br><span class="line">    &#125;);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>注意这里读的是 <code>selectionFor(agent).current</code>——也就是三层优先级合并后的结果。所以：</p>
+<ul>
+<li>如果用户在 UI 临时切到了不支持图片的模型 → 图片被拒（正确行为）</li>
+<li>如果 session 日志记录的是不支持图片的模型 → 图片被拒（正确行为）</li>
+<li>如果全局默认不支持图片 → 图片被拒（正确行为）</li>
+</ul>
+<p>这也解释了昨天遇到的第二个错误：<code>Model &quot;auto&quot; does not support image input.</code>——那个 session 的 requestHeader 里记录的模型是 <code>auto</code>，而 <code>auto</code> 没有声明 <code>input</code> 能力。</p>
+<hr>
+<h2 id="六、模型能力的解析链"><a href="#六、模型能力的解析链" class="headerlink" title="六、模型能力的解析链"></a>六、模型能力的解析链</h2><p><code>resolveModelInfo</code> 的内部逻辑：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="title function_">modelInfo</span>(<span class="params">snapshot, provider, model</span>) &#123;</span><br><span class="line">    <span class="keyword">const</span> profile = <span class="variable language_">this</span>.<span class="title function_">profileOf</span>(snapshot, provider);</span><br><span class="line">    <span class="keyword">const</span> resolvedModel = <span class="variable language_">this</span>.<span class="title function_">modelOf</span>(snapshot, provider, model);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> &#123;</span><br><span class="line">        provider,</span><br><span class="line">        <span class="attr">id</span>: model,</span><br><span class="line">        <span class="attr">name</span>: resolvedModel.<span class="property">name</span>,</span><br><span class="line">        <span class="attr">inputModalities</span>: [...resolvedModel.<span class="property">input</span>],   <span class="comment">// ← 来自 settings.yaml</span></span><br><span class="line">        <span class="attr">context</span>: &#123; <span class="attr">contextWindow</span>: resolvedModel.<span class="property">contextWindow</span> &#125;,</span><br><span class="line">        ...<span class="title function_">reasoningInfo</span>(resolvedModel, defaultLevel)</span><br><span class="line">    &#125;;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>resolvedModel.input</code> 的赋值：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">input</span>: <span class="title function_">declaredInput</span>(entry.<span class="property">input</span>) ?? base?.<span class="property">input</span> ?? [...request.<span class="property">defaultInput</span>]</span><br></pre></td></tr></table></figure>
+
+<p>其中：</p>
+<ul>
+<li><code>entry.input</code>：模型条目自己声明的（如 <code>[text, image]</code>）</li>
+<li><code>base?.input</code>：provider 级别的默认</li>
+<li><code>request.defaultInput</code>：pi-ai 的全局默认，即 <code>[&quot;text&quot;]</code></li>
+</ul>
+<p>所以：</p>
+<ul>
+<li>声明了 <code>input</code> → 用声明的值</li>
+<li>没声明 → fallback 到 <code>[&quot;text&quot;]</code></li>
+<li>结果是 <code>[&quot;text&quot;]</code> → 图片被拒</li>
+</ul>
+<hr>
+<h2 id="七、实际例子：一个-session-的完整选择过程"><a href="#七、实际例子：一个-session-的完整选择过程" class="headerlink" title="七、实际例子：一个 session 的完整选择过程"></a>七、实际例子：一个 session 的完整选择过程</h2><p>假设你做了以下操作：</p>
+<ol>
+<li>全局默认：<code>sense-nova / sensenova-6.8-flash-lite</code></li>
+<li>创建 session A，在 UI 切换到 <code>hcnsec / glm-5.3-flash</code></li>
+<li>继续用 session A 发了几个消息</li>
+<li>在 UI 切回 <code>sense-nova / sensenova-6.8-flash-lite</code></li>
+<li>创建 session B（没动过 UI）</li>
+</ol>
+<p>各阶段 <code>selection.current</code> 的值：</p>
+<table>
+<thead>
+<tr>
+<th>时刻</th>
+<th>picked</th>
+<th>session.log</th>
+<th>default</th>
+<th>最终 current</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>步骤1后</td>
+<td>undefined</td>
+<td>无</td>
+<td>sense-nova&#x2F;6.8</td>
+<td>sense-nova&#x2F;6.8</td>
+</tr>
+<tr>
+<td>步骤2后</td>
+<td>hcnsec&#x2F;glm-5.3</td>
+<td>无</td>
+<td>—</td>
+<td>hcnsec&#x2F;glm-5.3</td>
+</tr>
+<tr>
+<td>步骤3后</td>
+<td>hcnsec&#x2F;glm-5.3</td>
+<td>hcnsec&#x2F;glm-5.3</td>
+<td>—</td>
+<td>hcnsec&#x2F;glm-5.3</td>
+</tr>
+<tr>
+<td>步骤4后</td>
+<td>sense-nova&#x2F;6.8</td>
+<td>hcnsec&#x2F;glm-5.3</td>
+<td>—</td>
+<td>sense-nova&#x2F;6.8</td>
+</tr>
+<tr>
+<td>步骤5后</td>
+<td>undefined</td>
+<td>无</td>
+<td>sense-nova&#x2F;6.8</td>
+<td>sense-nova&#x2F;6.8</td>
+</tr>
+</tbody></table>
+<p>可以看到：</p>
+<ul>
+<li><code>picked</code> 消失后，<code>session.log</code> 接管</li>
+<li>新 session 没有 log，回到 <code>default</code></li>
+</ul>
+<hr>
+<h2 id="八、总结"><a href="#八、总结" class="headerlink" title="八、总结"></a>八、总结</h2><p>dsh 的模型选择是一个<strong>动态计算、三层叠加</strong>的系统：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">用户UI切换 → picked（最高，临时）</span><br><span class="line">    ↓ 未设置</span><br><span class="line">session日志 → requestHeader.config（中等，持久）</span><br><span class="line">    ↓ 未记录</span><br><span class="line">全局默认 → settings.yaml agent-default-model（最低，兜底）</span><br></pre></td></tr></table></figure>
+
+<p>这个设计的优点：</p>
+<ul>
+<li>灵活性：可以随时切换，不影响其他 session</li>
+<li>持久性：每个 session 记住自己的偏好</li>
+<li>可靠性：永远有兜底，不会选到 null</li>
+</ul>
+<p>理解了这套机制，遇到”模型选错了”、”切换不生效”、”新 session 用了奇怪的模型”这类问题，就有排查方向了。</p>
+
+  </div>
+  
+  
+    <div class="tags">
+      标签: 
+      
+        <a href="/blogs/tags/DeepSeek/">#DeepSeek</a>
+      
+        <a href="/blogs/tags/%E6%9E%B6%E6%9E%84/">#架构</a>
+      
+        <a href="/blogs/tags/dsh/">#dsh</a>
+      
+        <a href="/blogs/tags/%E6%95%99%E7%A8%8B/">#教程</a>
+      
+        <a href="/blogs/tags/LLM/">#LLM</a>
+      
+        <a href="/blogs/tags/%E6%BA%90%E7%A0%81%E9%98%85%E8%AF%BB/">#源码阅读</a>
+      
+    </div>
+  
+</article>
+  </main>
+  
+  <footer>
+    <p>© 2025 创业思考博客</p>
+  </footer>
+</body>
+</html>
