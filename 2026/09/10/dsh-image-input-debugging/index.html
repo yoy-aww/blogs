@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>一个&#34;不支持图片&#34;的bug，让我翻遍了整个dsh源码 | 创业思考博客</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/blogs/css/style.css">
+<meta name="generator" content="Hexo 8.1.1"></head>
+<body>
+  <header>
+    <h1><a href="/blogs/">创业思考博客</a></h1>
+    <nav>
+      
+        <a href="/blogs/">首页</a>
+      
+        <a href="/blogs/archives">归档</a>
+      
+        <a href="/blogs/about">关于</a>
+      
+    </nav>
+  </header>
+  
+  <main>
+    <article>
+  <h1>一个&#34;不支持图片&#34;的bug，让我翻遍了整个dsh源码</h1>
+  <time>2026-09-10</time>
+  
+  <div class="content post-content">
+    <h1 id="一个”不支持图片”的bug，让我翻遍了整个dsh源码"><a href="#一个”不支持图片”的bug，让我翻遍了整个dsh源码" class="headerlink" title="一个”不支持图片”的bug，让我翻遍了整个dsh源码"></a>一个”不支持图片”的bug，让我翻遍了整个dsh源码</h1><blockquote>
+<p>调试一个API报错的过程，意外揭示了LLM框架配置层的工作原理。有时候，问题不在代码里，而在配置里。</p>
+</blockquote>
+<p>2026年9月，我在家里的VPS上跑着DeepSeek Harness（dsh）的web界面，想用sensenova-6.8-flash-lite这个模型来做多模态任务——上传一张图片让模型识别。结果返回了一个让我摸不着头脑的错误：</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span></span><br><span class="line">  <span class="attr">&quot;error&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">    <span class="attr">&quot;code&quot;</span><span class="punctuation">:</span> <span class="string">&quot;attachment-error&quot;</span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">&quot;message&quot;</span><span class="punctuation">:</span> <span class="string">&quot;Model \&quot;sensenova-6.8-flash-lite\&quot; does not support image input.&quot;</span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">&quot;details&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">      <span class="attr">&quot;reason&quot;</span><span class="punctuation">:</span> <span class="string">&quot;MODEL_DOES_NOT_SUPPORT_IMAGES&quot;</span></span><br><span class="line">    <span class="punctuation">&#125;</span></span><br><span class="line">  <span class="punctuation">&#125;</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>问题在这里：</strong> sensenova-6.8-flash-lite明明是支持图片的模型。讯飞官网明确写了它是多模态模型，能处理文本和图片。那为什么dsh拒绝了我上传的图片？</p>
+<p>这个问题的解决过程，意外地成为了一次深入理解LLM框架配置机制的旅行。今天把它写下来，希望能帮到遇到同样问题的朋友。</p>
+<hr>
+<h2 id="一、问题的起点：一个看起来不太可能的错误"><a href="#一、问题的起点：一个看起来不太可能的错误" class="headerlink" title="一、问题的起点：一个看起来不太可能的错误"></a>一、问题的起点：一个看起来不太可能的错误</h2><p>我的环境是这样的：</p>
+<ul>
+<li>一台腾讯云VPS（OpenCloudOS 9.4），跑了Hexo博客、RustDesk服务器、mall-server</li>
+<li>上面部署了dsh web（DeepSeek Harness），监听127.0.0.1:3080</li>
+<li>通过Nginx反代到公网端口3081</li>
+<li>默认模型是 <code>sense-nova</code> provider 下的 <code>sensenova-6.8-flash-lite</code></li>
+<li>API Key存在 <code>/root/.dsh/.credentials.yaml</code> 里</li>
+</ul>
+<p>一切看起来都很正常。直到我上传了一张图片。</p>
+<p>一开始我以为是API Key的问题，或者是Sensenova服务端的问题。我试着直接调用Sensenova API：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">curl https://token.sensenova.cn/v1/models \</span><br><span class="line">  -H <span class="string">&quot;Authorization: Bearer <span class="variable">$SENSENOVA_API_KEY</span>&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>结果发现… API Key在环境变量里根本没设置。dsh是从进程环境中读取的，跟Hermes Agent用的Key不是一个东西。这不是API Key的问题。</p>
+<p>我也排除了Nginx的问题——Nginx只是反代，不会拦截内容。</p>
+<p>那问题出在哪？</p>
+<hr>
+<h2 id="二、顺着错误信息，追进了源码"><a href="#二、顺着错误信息，追进了源码" class="headerlink" title="二、顺着错误信息，追进了源码"></a>二、顺着错误信息，追进了源码</h2><p>错误信息是 <code>MODEL_DOES_NOT_SUPPORT_IMAGES</code>。我在dsh的源码里搜索这个关键词：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">grep -rn <span class="string">&quot;MODEL_DOES_NOT_SUPPORT_IMAGES&quot;</span> /root/.nvm/versions/node/v25.2.0/lib/node_modules/@deepseek-ai/dsh/</span><br></pre></td></tr></table></figure>
+
+<p>找到了。在 <code>dsh-host-apiproxy/lib/types/api-proxy.js</code> 里：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> (hasImage) &#123;</span><br><span class="line">    <span class="keyword">const</span> current = <span class="title function_">selectionFor</span>(agent).<span class="property">current</span>;</span><br><span class="line">    <span class="keyword">const</span> modelInfo = <span class="keyword">await</span> ctx.<span class="property">llm</span>.<span class="title function_">resolveModelInfo</span>(current.<span class="property">provider</span>, current.<span class="property">model</span>);</span><br><span class="line">    <span class="keyword">if</span> (modelInfo.<span class="property">inputModalities</span> !== <span class="literal">undefined</span> &amp;&amp; !modelInfo.<span class="property">inputModalities</span>.<span class="title function_">includes</span>(<span class="string">&#x27;image&#x27;</span>)) &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="title function_">err</span>(request, &#123;</span><br><span class="line">            <span class="attr">code</span>: <span class="string">&#x27;attachment-error&#x27;</span>,</span><br><span class="line">            <span class="attr">message</span>: <span class="string">`Model &quot;<span class="subst">$&#123;current.model&#125;</span>&quot; does not support image input.`</span>,</span><br><span class="line">            <span class="attr">details</span>: &#123; <span class="attr">reason</span>: <span class="string">&#x27;MODEL_DOES_NOT_SUPPORT_IMAGES&#x27;</span> &#125;,</span><br><span class="line">        &#125;);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>逻辑很清晰：<strong>检查模型的 <code>inputModalities</code> 是否包含 <code>image</code>，不包含就拒绝。</strong></p>
+<p>那 <code>inputModalities</code> 是从哪来的？继续追查：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// dsh-llm-pi-ai/lib/index.js</span></span><br><span class="line"><span class="attr">inputModalities</span>: [...resolvedModel.<span class="property">input</span>]</span><br></pre></td></tr></table></figure>
+
+<p>来自 <code>resolvedModel.input</code>。再往上追：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">input</span>: <span class="title function_">declaredInput</span>(entry.<span class="property">input</span>) ?? base?.<span class="property">input</span> ?? [...request.<span class="property">defaultInput</span>]</span><br></pre></td></tr></table></figure>
+
+<p>这里有三层fallback：</p>
+<ol>
+<li>模型条目自己声明的 <code>input</code></li>
+<li>Provider级别的默认 <code>input</code></li>
+<li><code>request.defaultInput</code>，也就是 <strong><code>DEFAULT_INPUT = [&quot;text&quot;]</code></strong></li>
+</ol>
+<p><strong>问题找到了。</strong> 我的 <code>settings.yaml</code> 里，<code>sensenova-6.8-flash-lite</code> 只写了：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="bullet">-</span> <span class="attr">id:</span> <span class="string">sensenova-6.8-flash-lite</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">sensenova-6.8</span></span><br></pre></td></tr></table></figure>
+
+<p>没有 <code>input</code> 字段。于是pi-ai库 fallback到了默认的 <code>[&quot;text&quot;]</code>，告诉dsh”这个模型只支持文本”。dsh接收到这个信息，就拒绝了图片。</p>
+<p><strong>模型本身支持图片，但dsh的配置没有声明这件事。</strong></p>
+<hr>
+<h2 id="三、为什么默认值是-“text”-？"><a href="#三、为什么默认值是-“text”-？" class="headerlink" title="三、为什么默认值是[“text”]？"></a>三、为什么默认值是[“text”]？</h2><p>这涉及到pi-ai库的设计哲学。</p>
+<p>pi-ai是DeepSeek团队开发的一个LLM抽象层，它假设：<strong>如果一个模型没有明确声明支持图片，那就默认不支持。</strong></p>
+<p>这是一种安全策略。如果你不小心给一个纯文本模型传了图片，框架不会尝试发送，而是提前报错。这比让模型收到图片后随机丢弃或报错要好得多。</p>
+<p>但代价是：<strong>所有新模型都需要手动声明能力。</strong> 这对于经常更换模型、使用新兴模型的用户来说，确实有点麻烦。</p>
+<hr>
+<h2 id="四、修复：给模型声明能力"><a href="#四、修复：给模型声明能力" class="headerlink" title="四、修复：给模型声明能力"></a>四、修复：给模型声明能力</h2><p>修复很简单——在 <code>settings.yaml</code> 里给模型加上 <code>input</code> 字段：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="bullet">-</span> <span class="attr">id:</span> <span class="string">sensenova-6.8-flash-lite</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">sensenova-6.8</span></span><br><span class="line">  <span class="attr">input:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">text</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">image</span></span><br></pre></td></tr></table></figure>
+
+<p>但我不止修了一个模型。我把所有已知的多模态模型都声明了一遍：</p>
+<p><strong>讯飞系（sensenova provider）：</strong></p>
+<ul>
+<li><code>sensenova-6.8-flash-lite</code> — 多模态</li>
+<li><code>sensenova-u1.5-lite</code> — 多模态</li>
+<li><code>deepseek-v4-flash</code> &#x2F; <code>deepseek-v4-pro</code> — DeepSeek V4系列支持图片</li>
+<li><code>glm-5.2</code> — 智谱GLM多模态</li>
+</ul>
+<p><strong>HCNSEC代理下的模型：</strong></p>
+<ul>
+<li><code>sensenova-6.8-flash-lite</code> — 同上</li>
+<li><code>sensenova-u1.5-lite</code> — 同上</li>
+<li><code>glm-5.3-flash</code> — 智谱新一代多模态</li>
+<li><code>longcat-2.0</code> — LongCat多模态</li>
+<li><code>spark-x2.5</code> — 讯飞星火多模态</li>
+<li><code>step-3.7-flash</code> — Step系列多模态</li>
+</ul>
+<p><strong>没有声明的模型（判断为纯文本）：</strong></p>
+<ul>
+<li><code>kimi-k3</code> — 月之暗面，以代码&#x2F;文本为主</li>
+<li><code>sensenova-6.7-flash-lite</code> — 已知只有文本能力</li>
+<li><code>sensenova-u1-fast</code> — 快速版，纯文本</li>
+<li><code>auto</code> — 自动路由，不固定模型</li>
+<li><code>MiniMax-M3</code>、<code>step-explore</code>、<code>step-router-v1</code> — 文本&#x2F;函数调用类</li>
+<li><code>Qwen3-Embedding-8B</code>、<code>Qwen3.6-35B-A3B</code> — 嵌入&#x2F;基座模型</li>
+</ul>
+<p>改完配置文件后，重启dsh：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">kill</span> $(pgrep -f <span class="string">&#x27;dsh web&#x27;</span>)</span><br><span class="line"><span class="built_in">nohup</span> dsh web --no-open --host 127.0.0.1 --port 3080 \</span><br><span class="line">  --trusted-host 43.153.148.187:3081 &amp;</span><br></pre></td></tr></table></figure>
+
+<p>再次上传图片，问题解决。</p>
+<hr>
+<h2 id="五、更深一层：API的Wire-Schema"><a href="#五、更深一层：API的Wire-Schema" class="headerlink" title="五、更深一层：API的Wire Schema"></a>五、更深一层：API的Wire Schema</h2><p>修复过程中，我还发现了一个有趣的现象。</p>
+<p>dsh的 <code>session.prompt</code> 接口接受的图片格式，跟OpenAI的API不太一样。OpenAI用的是：</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span><span class="attr">&quot;type&quot;</span><span class="punctuation">:</span> <span class="string">&quot;image_url&quot;</span><span class="punctuation">,</span> <span class="attr">&quot;image_url&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span><span class="attr">&quot;url&quot;</span><span class="punctuation">:</span> <span class="string">&quot;data:image/...&quot;</span><span class="punctuation">&#125;</span><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p>而dsh用的是：</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span><span class="attr">&quot;type&quot;</span><span class="punctuation">:</span> <span class="string">&quot;image&quot;</span><span class="punctuation">,</span> <span class="attr">&quot;mediaType&quot;</span><span class="punctuation">:</span> <span class="string">&quot;image/jpeg&quot;</span><span class="punctuation">,</span> <span class="attr">&quot;data&quot;</span><span class="punctuation">:</span> <span class="string">&quot;&lt;base64&gt;&quot;</span><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p>这是dsh自己定义的Wire Schema（在 <code>dsh-host-apiproxy/lib/types/api/sessions.schema.js</code> 里）：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">export</span> <span class="keyword">const</span> promptContentPartSchema = z.<span class="title function_">discriminatedUnion</span>(<span class="string">&#x27;type&#x27;</span>, [</span><br><span class="line">    z.<span class="title function_">object</span>(&#123; <span class="attr">type</span>: z.<span class="title function_">literal</span>(<span class="string">&#x27;text&#x27;</span>), <span class="attr">text</span>: z.<span class="title function_">string</span>() &#125;),</span><br><span class="line">    z.<span class="title function_">object</span>(&#123; <span class="attr">type</span>: z.<span class="title function_">literal</span>(<span class="string">&#x27;image&#x27;</span>), <span class="attr">mediaType</span>: imageMediaTypeSchema, <span class="attr">data</span>: z.<span class="title function_">string</span>(), <span class="attr">name</span>: z.<span class="title function_">string</span>().<span class="title function_">optional</span>() &#125;),</span><br><span class="line">]);</span><br></pre></td></tr></table></figure>
+
+<p><code>mediaType</code> 只支持四种：<code>image/png</code>、<code>image/jpeg</code>、<code>image/webp</code>、<code>image/gif</code>。</p>
+<p>如果你用OpenAI的格式（<code>image_url</code>），dsh会直接拒绝，报 <code>invalid_union</code> 错误。这也是一个容易踩的坑。</p>
+<hr>
+<h2 id="六、教训与思考"><a href="#六、教训与思考" class="headerlink" title="六、教训与思考"></a>六、教训与思考</h2><h3 id="1-配置即代码，文档即真相"><a href="#1-配置即代码，文档即真相" class="headerlink" title="1. 配置即代码，文档即真相"></a>1. 配置即代码，文档即真相</h3><p>这个问题最根本的原因是：<strong>配置里没有声明能力，框架就认为你没有这个能力。</strong></p>
+<p>dsh的 <code>settings.yaml</code> 是整个系统的”真相源”。模型支持什么、不支持什么，不是由模型本身的特性决定的，而是由配置文件决定的。</p>
+<p>这让我想起了一句老话：<strong>“What you configure is what you get.”</strong> 你配了什么，就得到什么；你没配，就没有。</p>
+<h3 id="2-错误信息是你的朋友"><a href="#2-错误信息是你的朋友" class="headerlink" title="2. 错误信息是你的朋友"></a>2. 错误信息是你的朋友</h3><p><code>MODEL_DOES_NOT_SUPPORT_IMAGES</code> 这个错误信息虽然简短，但指向性很明确。它告诉你：<strong>框架认为这个模型不支持图片。</strong> 剩下的问题就是搞清楚”为什么框架这么认为”。</p>
+<p>很多人看到错误就慌了，直接去搜”怎么解决MODEL_DOES_NOT_SUPPORT_IMAGES”。但其实错误信息本身就包含了答案——只是需要一点好奇心去追问。</p>
+<h3 id="3-新模型要手动声明能力"><a href="#3-新模型要手动声明能力" class="headerlink" title="3. 新模型要手动声明能力"></a>3. 新模型要手动声明能力</h3><p>这是一个合理的成本。pi-ai库无法自动探测每个模型的 multimodal 能力（尤其是通过自定义API端点接入的模型）。所以每次接入新模型，都需要手动声明：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="bullet">-</span> <span class="attr">id:</span> <span class="string">new-model-id</span></span><br><span class="line">  <span class="attr">input:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">text</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">image</span>  <span class="comment"># 如果支持图片的话</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="4-源码是最好的文档"><a href="#4-源码是最好的文档" class="headerlink" title="4. 源码是最好的文档"></a>4. 源码是最好的文档</h3><p>这个问题最终靠翻源码解决。dsh的源码不算复杂，结构清晰。如果你遇到问题，<code>grep</code> 是最快的调查工具。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 搜错误码</span></span><br><span class="line">grep -rn <span class="string">&quot;MODEL_DOES_NOT_SUPPORT_IMAGES&quot;</span> /path/to/dsh/</span><br><span class="line"></span><br><span class="line"><span class="comment"># 搜模型能力检查</span></span><br><span class="line">grep -rn <span class="string">&quot;inputModalities\|input.*image&quot;</span> /path/to/dsh/</span><br><span class="line"></span><br><span class="line"><span class="comment"># 搜schema定义</span></span><br><span class="line">grep -rn <span class="string">&quot;promptContentPartSchema\|imageMediaTypeSchema&quot;</span> /path/to/dsh/</span><br></pre></td></tr></table></figure>
+
+<p>这三个搜索，几乎覆盖了我整个调试过程。</p>
+<hr>
+<h2 id="附：完整的settings-yaml配置"><a href="#附：完整的settings-yaml配置" class="headerlink" title="附：完整的settings.yaml配置"></a>附：完整的settings.yaml配置</h2><p>修改后的 <code>/root/.dsh/settings.yaml</code> 关键部分：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">agent-default-model:</span></span><br><span class="line">  <span class="attr">provider:</span> <span class="string">sense-nova</span></span><br><span class="line">  <span class="attr">model:</span> <span class="string">sensenova-6.8-flash-lite</span></span><br><span class="line"></span><br><span class="line"><span class="attr">llm-pi-ai:</span></span><br><span class="line">  <span class="attr">providers:</span></span><br><span class="line">    <span class="attr">sense-nova:</span></span><br><span class="line">      <span class="attr">apiKeyEnv:</span> <span class="string">SENSE_NOVA_API_KEY</span></span><br><span class="line">      <span class="attr">api:</span> <span class="string">openai-completions</span></span><br><span class="line">      <span class="attr">baseURL:</span> <span class="string">https://token.sensenova.cn/v1</span></span><br><span class="line">      <span class="attr">models:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">id:</span> <span class="string">sensenova-6.8-flash-lite</span></span><br><span class="line">          <span class="attr">name:</span> <span class="string">sensenova-6.8</span></span><br><span class="line">          <span class="attr">input:</span> [<span class="string">text</span>, <span class="string">image</span>]</span><br><span class="line">        <span class="bullet">-</span> <span class="attr">id:</span> <span class="string">sensenova-u1.5-lite</span></span><br><span class="line">          <span class="attr">name:</span> <span class="string">sensenova-u1.5-lite</span></span><br><span class="line">          <span class="attr">contextWindow:</span> <span class="number">262144</span></span><br><span class="line">          <span class="attr">input:</span> [<span class="string">text</span>, <span class="string">image</span>]</span><br><span class="line">        <span class="bullet">-</span> <span class="attr">id:</span> <span class="string">deepseek-v4-flash</span></span><br><span class="line">          <span class="attr">name:</span> <span class="string">deepseek-v4-flash</span></span><br><span class="line">          <span class="attr">contextWindow:</span> <span class="number">1048576</span></span><br><span class="line">          <span class="attr">input:</span> [<span class="string">text</span>, <span class="string">image</span>]</span><br><span class="line">        <span class="bullet">-</span> <span class="attr">id:</span> <span class="string">deepseek-v4-pro</span></span><br><span class="line">          <span class="attr">name:</span> <span class="string">deepseek-v4-pro</span></span><br><span class="line">          <span class="attr">contextWindow:</span> <span class="number">1048576</span></span><br><span class="line">          <span class="attr">input:</span> [<span class="string">text</span>, <span class="string">image</span>]</span><br><span class="line">        <span class="bullet">-</span> <span class="attr">id:</span> <span class="string">glm-5.2</span></span><br><span class="line">          <span class="attr">name:</span> <span class="string">glm-5.2</span></span><br><span class="line">          <span class="attr">contextWindow:</span> <span class="number">1048576</span></span><br><span class="line">          <span class="attr">input:</span> [<span class="string">text</span>, <span class="string">image</span>]</span><br><span class="line">        <span class="bullet">-</span> <span class="attr">id:</span> <span class="string">kimi-k3</span></span><br><span class="line">          <span class="attr">name:</span> <span class="string">kimi-k3</span></span><br><span class="line">          <span class="attr">contextWindow:</span> <span class="number">1048576</span></span><br><span class="line">          <span class="comment"># 纯文本，不加input</span></span><br><span class="line"></span><br><span class="line">    <span class="attr">hcnsec:</span></span><br><span class="line">      <span class="attr">apiKeyEnv:</span> <span class="string">HCNSEC_API_KEY</span></span><br><span class="line">      <span class="attr">api:</span> <span class="string">openai-completions</span></span><br><span class="line">      <span class="attr">baseURL:</span> <span class="string">https://api.hcnsec.cn/v1</span></span><br><span class="line">      <span class="attr">models:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">id:</span> <span class="string">auto</span></span><br><span class="line">          <span class="comment"># 自动路由，不固定模型</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">id:</span> <span class="string">sensenova-6.8-flash-lite</span></span><br><span class="line">          <span class="attr">input:</span> [<span class="string">text</span>, <span class="string">image</span>]</span><br><span class="line">        <span class="bullet">-</span> <span class="attr">id:</span> <span class="string">sensenova-u1.5-lite</span></span><br><span class="line">          <span class="attr">input:</span> [<span class="string">text</span>, <span class="string">image</span>]</span><br><span class="line">        <span class="bullet">-</span> <span class="attr">id:</span> <span class="string">glm-5.3-flash</span></span><br><span class="line">          <span class="attr">input:</span> [<span class="string">text</span>, <span class="string">image</span>]</span><br><span class="line">        <span class="bullet">-</span> <span class="attr">id:</span> <span class="string">longcat-2.0</span></span><br><span class="line">          <span class="attr">input:</span> [<span class="string">text</span>, <span class="string">image</span>]</span><br><span class="line">        <span class="bullet">-</span> <span class="attr">id:</span> <span class="string">spark-x2.5</span></span><br><span class="line">          <span class="attr">input:</span> [<span class="string">text</span>, <span class="string">image</span>]</span><br><span class="line">        <span class="bullet">-</span> <span class="attr">id:</span> <span class="string">step-3.7-flash</span></span><br><span class="line">          <span class="attr">input:</span> [<span class="string">text</span>, <span class="string">image</span>]</span><br></pre></td></tr></table></figure>
+
+<hr>
+<p><strong>写在最后</strong></p>
+<p>调试技术问题最有趣的时刻，不是找到答案的那一刻，而是<strong>意识到问题比你想象的要简单的那一刻</strong>。</p>
+<p>这个bug花了大约两个小时排查。两个小时的调查路径是：</p>
+<ol>
+<li>排除API Key问题</li>
+<li>排除Nginx反代问题</li>
+<li>找到错误信息在源码中的位置</li>
+<li>顺着数据流追到配置层</li>
+<li>发现问题——只是少了几行YAML</li>
+</ol>
+<p>有时候，我们花了太多时间怀疑”复杂原因”，而忽略了”简单原因”。</p>
+<p>这次经历也让我更深入地理解了dsh的架构：它不只是一个LLM客户端，而是一个<strong>配置驱动的模型路由层</strong>。你的 <code>settings.yaml</code> 就是真相源，它决定了框架如何看待世界。</p>
+<p>所以，下次遇到”模型不支持XX”的错误，先别急着换模型——检查一下你的配置。</p>
+
+  </div>
+  
+  
+    <div class="tags">
+      标签: 
+      
+        <a href="/blogs/tags/DeepSeek/">#DeepSeek</a>
+      
+        <a href="/blogs/tags/%E8%B0%83%E8%AF%95/">#调试</a>
+      
+        <a href="/blogs/tags/dsh/">#dsh</a>
+      
+        <a href="/blogs/tags/LLM/">#LLM</a>
+      
+        <a href="/blogs/tags/%E9%85%8D%E7%BD%AE/">#配置</a>
+      
+        <a href="/blogs/tags/%E6%BA%90%E7%A0%81%E9%98%85%E8%AF%BB/">#源码阅读</a>
+      
+    </div>
+  
+</article>
+  </main>
+  
+  <footer>
+    <p>© 2025 创业思考博客</p>
+  </footer>
+</body>
+</html>
