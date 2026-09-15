@@ -1,6 +1,7 @@
 ---
 title: 编程语言的哲学：Go、Rust、Zig的价值观与权衡
 date: 2026-01-22 16:30:00
+type: thought
 permalink: /2026/01/22/programming-languages-philosophy-go-rust-zig-2026/
 tags: 
   - 编程语言

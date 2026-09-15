@@ -1,7 +1,20 @@
 <% page.posts.each(function(post){ %>
-  <article>
-    <h2><a href="<%- url_for(post.path) %>"><%= post.title %></a></h2>
-    <time><%= date(post.date, 'YYYY-MM-DD HH:MM') %></time>
+  <article class="post-item" data-type="<%= post.type || 'thought' %>">
+    <div class="post-item-header">
+      <h2><a href="<%- url_for(post.path) %>"><%= post.title %></a></h2>
+      <time><%= date(post.date, 'YYYY-MM-DD HH:MM') %></time>
+    </div>
+    <div class="post-meta-row">
+      <% var typeBadge = post.type === 'tech'
+        ? '<span class="type-badge type-badge--tech">技术</span>'
+        : '<span class="type-badge type-badge--thought">思想</span>'; %>
+      <%- typeBadge %>
+      <% if (post.tags && post.tags.length){ %>
+        <% post.tags.each(function(tag){ %>
+          <a href="<%- url_for(tag.path) %>" class="post-tag">#<%= tag.name %></a>
+        <% }) %>
+      <% } %>
+    </div>
     <div class="excerpt">
       <%- truncate(
         strip_html(post.content.replace(/<h1[^>]*>.*?<\/h1>\s*/i, ''))

@@ -1,6 +1,7 @@
 ---
 title: 程序员为什么找不到买家：当代码能力撞上市场思维
 date: 2026-08-16 15:30:00
+type: thought
 permalink: /2026/08/16/programmer-market-mindset/
 tags:
   - 程序员思维

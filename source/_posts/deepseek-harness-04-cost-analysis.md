@@ -1,6 +1,7 @@
 ---
 title: DeepSeek 成本深度分析：从 API 定价到自建集群的经济账
 date: 2026-08-20 12:00:00
+type: tech
 tags:
   - DeepSeek
   - 成本分析

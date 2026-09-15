@@ -1,6 +1,7 @@
 ---
 title: 产品成长中的坚持：为什么保持观点比取悦所有人更重要
 date: 2025-11-18 10:30:00
+type: thought
 permalink: /2025/11/18/staying-opinionated-in-product-growth/
 tags: 
   - 产品规划

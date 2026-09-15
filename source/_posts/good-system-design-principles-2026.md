@@ -1,6 +1,7 @@
 ---
 title: 优秀系统设计的本质：朴实无华的智慧
 date: 2026-01-07 14:30:00
+type: tech
 permalink: /2026/01/07/good-system-design-principles-2026/
 tags: 
   - 系统设计

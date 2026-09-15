@@ -1,6 +1,7 @@
 ---
 title: Fiber in C++：游戏开发中的协作式多任务编程指南
 date: 2025-12-15 14:30:00
+type: tech
 permalink: /2025/12/15/fiber-in-cpp-understanding-the-basics-guide/
 tags: 
   - C++

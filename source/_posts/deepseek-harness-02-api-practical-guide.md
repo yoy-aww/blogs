@@ -1,6 +1,7 @@
 ---
 title: DeepSeek 开发者实战：API 调用、思考模式与成本优化
 date: 2026-08-20 10:00:00
+type: tech
 tags:
   - DeepSeek
   - API

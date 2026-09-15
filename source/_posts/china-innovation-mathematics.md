@@ -1,6 +1,7 @@
 ---
 title: 中国创新的简单数学：从模仿者到全球领导者的转变
 date: 2025-01-04 15:45:00
+type: thought
 permalink: /2025/01/04/china-innovation-mathematics/
 tags: 
   - 创新

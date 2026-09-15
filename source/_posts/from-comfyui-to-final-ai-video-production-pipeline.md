@@ -1,6 +1,7 @@
 ---
 title: 从 ComfyUI 到成片：AI 视频制作的完整本地工作流
 date: 2026-08-07 09:00:00
+type: tech
 tags:
   - AI
   - ComfyUI

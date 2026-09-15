@@ -1,6 +1,9 @@
 # Simple Theme Configuration
 menu:
   首页: /
+  思想博客: /search/?type=thought
+  技术博客: /search/?type=tech
+  搜索: /search/
   归档: /archives
   关于: /about
 

@@ -1,14 +1,20 @@
 <article>
+  <div class="post-meta-row post-header-meta">
+    <% var typeBadge = page.type === 'tech'
+      ? '<span class="type-badge type-badge--tech">技术</span>'
+      : '<span class="type-badge type-badge--thought">思想</span>'; %>
+    <%- typeBadge %>
+    <time><%= date(page.date, 'YYYY-MM-DD HH:MM') %></time>
+  </div>
   <h1><%= page.title %></h1>
-  <time><%= date(page.date, 'YYYY-MM-DD') %></time>
-  
+
   <div class="content post-content">
     <%- page.content %>
   </div>
-  
+
   <% if (page.tags && page.tags.length){ %>
     <div class="tags">
-      标签: 
+      标签:
       <% page.tags.each(function(tag){ %>
         <a href="<%- url_for(tag.path) %>">#<%= tag.name %></a>
       <% }) %>

@@ -1,6 +1,7 @@
 ---
 title: 学习编程不需要LLM：为什么困难的路才是正确的路
 date: 2026-01-22 17:15:00
+type: thought
 permalink: /2026/01/22/learning-programming-without-llm-the-hard-way/
 tags: 
   - 编程学习

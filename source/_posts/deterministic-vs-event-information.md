@@ -1,6 +1,7 @@
 ---
 title: 你反复看的日志，其实不是信息
 date: 2026-09-10 20:00:00
+type: thought
 permalink: /2026/09/10/deterministic-vs-event-information/
 tags:
   - 思考

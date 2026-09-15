@@ -1,0 +1,64 @@
+<%
+// 搜索页：展示全部文章，客户端做搜索和过滤
+// 从 site.posts 获取全量数据（不走分页）
+var allPosts = [];
+site.posts.each(function(post) {
+  allPosts.push({
+    title: post.title,
+    path: post.path,
+    type: post.type || 'thought',
+    dateLabel: post.date.format('YYYY-MM-DD HH:MM'),
+    tags: (post.tags || []).map(function(t) { return t.name; }),
+    excerpt: (post.excerpt || '').slice(0, 200)
+  });
+});
+// 写入 window.posts 供 search.js 使用
+// 同时直接渲染全部文章 HTML 作为 fallback
+-%>
+
+<% if (typeof window === 'undefined'){ %>
+<script>
+  window.posts = <%- JSON.stringify(allPosts) %>;
+</script>
+<% } %>
+
+<div class="search-results-header">
+  <span class="result-count" id="result-count"></span>
+</div>
+
+<div class="post-list search-post-list" id="post-list">
+  <% allPosts.forEach(function(post){ %><% var p = post; %>
+  <article class="post-item" data-type="<%= p.type %>" data-title="<%- p.title.replace(/"/g,'&quot;') %>" data-tags="<%- p.tags.join(',').replace(/"/g,'&quot;') %>">
+    <div class="post-item-header">
+      <h2><a href="<%- url_for(p.path) %>"><%= p.title %></a></h2>
+      <time><%= p.dateLabel %></time>
+    </div>
+    <div class="post-meta-row">
+      <% var typeBadge = p.type === 'tech'
+        ? '<span class="type-badge type-badge--tech">技术</span>'
+        : '<span class="type-badge type-badge--thought">思想</span>'; %>
+      <%- typeBadge %>
+      <% p.tags.forEach(function(tag){ %>
+        <a href="<%- url_for('/tags/' + tag.path + '/') %>" class="post-tag">#<%= tag.name %></a>
+      <% }) %>
+    </div>
+    <% if (p.excerpt){ %>
+    <div class="excerpt"><%- p.excerpt %></div>
+    <% } %>
+  </article>
+  <% }); %>
+</div>
+
+<% if (allPosts.length === 0){ %>
+  <div class="no-results">
+    <i class="fas fa-search"></i>
+    <p>没有找到匹配的文章</p>
+    <p class="no-results-hint">试试其他关键词，或清除搜索条件</p>
+  </div>
+<% } %>
+
+<script>
+  if (typeof window.posts === 'undefined' || window.posts.length === 0) {
+    window.posts = <%- JSON.stringify(allPosts) %>;
+  }
+</script>

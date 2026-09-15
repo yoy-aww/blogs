@@ -1,6 +1,7 @@
 ---
 title: DeepSeek 技术架构全景：从 V3 到 V4 的演进与核心创新
 date: 2026-08-20 09:00:00
+type: tech
 tags:
   - DeepSeek
   - 大模型

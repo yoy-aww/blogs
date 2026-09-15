@@ -1,6 +1,7 @@
 ---
 title: 一个听起来完美的生意：为什么我差点又开始了
 date: 2026-09-06 22:30:00
+type: thought
 permalink: /2026/09/06/sounds-good-business-analysis/
 tags:
   - 创业

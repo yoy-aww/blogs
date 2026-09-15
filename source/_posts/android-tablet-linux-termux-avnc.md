@@ -1,6 +1,7 @@
 ---
 title: "把安卓平板变成 Linux 电脑：Termux、F-Droid 与 AVNC 的组合实践"
 date: 2026-08-12 20:00:00
+type: tech
 tags: [Linux, Android, Termux, 远程桌面, VNC, 折腾]
 description: "不需要 root，不需要电脑，只需要 Termux、F-Droid 和 AVNC 三个开源软件，就能在安卓平板上跑起一个完整的 Linux 桌面。这篇是完整实践记录。"
 ---

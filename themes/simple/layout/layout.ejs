@@ -4,28 +4,47 @@
   <meta charset="utf-8">
   <title><% if (page.title){ %><%= page.title %> | <% } %><%= config.title %></title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <!-- Bootstrap CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="<%- url_for('css/style.css') %>">
 </head>
-<body>
+<body<% if (page.layout === 'search'){ %> class="is-search-page"<% } %>>
   <header>
-    <h1><a href="<%- url_for() %>"><%= config.title %></a></h1>
-    <nav>
-      <% for (name in theme.menu){ %>
-        <a href="<%- url_for(theme.menu[name]) %>"><%= name %></a>
+    <div class="header-top">
+      <h1><a href="<%- url_for() %>"><%= config.title %></a></h1>
+      <nav>
+        <% for (name in theme.menu){ %><% if (name !== '搜索'){ %>
+          <a href="<%- url_for(theme.menu[name]) %>"><%= name %></a>
+        <% } %><% } %>
+      </nav>
+    </div>
+    <div class="search-wrap">
+      <form class="search-form" action="<%- url_for('/search/') %>" method="GET">
+        <i class="fas fa-search"></i>
+        <input type="text" name="q" id="search-input" placeholder="搜索文章标题、标签..." autocomplete="off">
+        <button type="submit">搜索</button>
+      </form>
+      <% if (page.layout === 'search'){ %>
+        <div class="filter-row">
+          <span class="filter-label">类型过滤：</span>
+          <a href="<%- url_for(theme.menu['思想博客']) %>" class="filter-btn filter-btn--thought">思想博客</a>
+          <a href="<%- url_for(theme.menu['技术博客']) %>" class="filter-btn filter-btn--tech">技术博客</a>
+        </div>
       <% } %>
-    </nav>
+    </div>
   </header>
-  
+
   <main>
     <%- body %>
   </main>
-  
+
   <footer>
     <p><%= theme.footer.copyright %></p>
   </footer>
+
+  <script>
+    window.posts = <%- postsJSON() %>;
+  </script>
+  <script src="<%- url_for('js/search.js') %>"></script>
 </body>
 </html>

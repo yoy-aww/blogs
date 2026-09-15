@@ -1,6 +1,7 @@
 ---
 title: AI 是镜子，不是朋友
 date: 2026-09-16 20:00:00
+type: thought
 permalink: /2026/09/16/ai-is-a-mirror-not-a-friend/
 tags:
   - AI

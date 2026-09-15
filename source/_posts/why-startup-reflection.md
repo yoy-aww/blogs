@@ -1,6 +1,7 @@
 ---
 title: 创业思考：为什么选择为自己工作？
 date: 2025-11-12 14:30:00
+type: thought
 permalink: /2025/11/12/startup/
 tags: 
   - 创业

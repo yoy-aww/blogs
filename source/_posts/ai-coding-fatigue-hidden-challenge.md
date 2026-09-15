@@ -1,6 +1,7 @@
 ---
 title: AI编程疲劳：隐藏在高效背后的挑战
 date: 2026-01-04 15:30:00
+type: tech
 permalink: /2026/01/04/ai-coding-fatigue-hidden-challenge/
 tags: 
   - AI编程

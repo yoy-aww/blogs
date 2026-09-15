@@ -1,6 +1,7 @@
 ---
 title: 为什么我喜欢编程？
 date: 2025-12-02 10:00:00
+type: thought
 permalink: /2025/04/25/why-i-love-programming/
 tags: 
   - 编程

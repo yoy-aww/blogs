@@ -1,6 +1,7 @@
 ---
 title: 现代Web实时通信技术全面对比：WebSocket、SSE、长轮询与WebTransport
 date: 2025-12-25 16:00:00
+type: tech
 permalink: /2025/12/25/realtime-web-communication-technologies-comparison/
 tags: 
   - WebSocket

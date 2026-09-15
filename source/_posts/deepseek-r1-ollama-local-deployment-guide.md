@@ -1,6 +1,7 @@
 ---
 title: DeepSeek R1 本地部署实操指南：RTX 3060 12GB + Ollama 全流程
 date: 2026-08-20 16:00:00
+type: tech
 tags:
   - DeepSeek
   - Ollama

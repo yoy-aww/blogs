@@ -1,6 +1,7 @@
 ---
 title: 运动社交 App MVP 功能原型设计
 date: 2026-08-07 15:00:00
+type: thought
 tags:
   - 创业
   - 产品设计

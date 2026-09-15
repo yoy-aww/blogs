@@ -1,6 +1,7 @@
 ---
 title: 网络架构的演进：从中心化到中继模式的思考
 date: 2026-01-02 14:30:00
+type: tech
 permalink: /2026/01/02/network-architecture-evolution-from-centralized-to-relay/
 tags: 
   - 分布式系统

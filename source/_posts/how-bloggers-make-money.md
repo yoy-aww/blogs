@@ -1,6 +1,7 @@
 ---
 title: 博主是如何赚钱的？揭秘博客变现的6种方式
 date: 2025-11-17 10:00:00
+type: thought
 permalink: /2025/11/17/how-bloggers-make-money/
 tags: 
   - 博客

@@ -1,6 +1,7 @@
 ---
 title: Grill-Me：让AI像面试官一样逼问你，你可能终于学会了
 date: 2026-08-07 14:00:00
+type: thought
 permalink: /2026/08/07/grill-me-learning-method/
 tags: 
   - AI学习

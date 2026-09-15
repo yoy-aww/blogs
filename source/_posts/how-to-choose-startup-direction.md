@@ -1,6 +1,7 @@
 ---
 title: 创业方向选择指南：从想法到行动的完整路径
 date: 2025-11-12 15:30:00
+type: thought
 permalink: /2025/11/12/startup-direction/
 tags: 
   - 创业

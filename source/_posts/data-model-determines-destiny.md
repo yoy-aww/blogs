@@ -1,6 +1,7 @@
 ---
 title: 数据模型决定命运：为什么产品架构是创业公司最重要的隐形决策
 date: 2025-11-18 14:30:00
+type: thought
 permalink: /2025/11/18/data-model-determines-destiny/
 tags: 
   - 产品规划

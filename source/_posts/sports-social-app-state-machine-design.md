@@ -1,6 +1,7 @@
 ---
 title: 运动社交 App 组局业务流程状态机设计
 date: 2026-08-07 18:00:00
+type: thought
 tags:
   - 创业
   - 系统设计

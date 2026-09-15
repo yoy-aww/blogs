@@ -1,6 +1,7 @@
 ---
 title: Prompt Caching：AI应用性能优化的新利器
 date: 2026-01-04 15:30:00
+type: tech
 permalink: /2026/01/04/prompt-caching-optimization-guide/
 tags: 
   - AI

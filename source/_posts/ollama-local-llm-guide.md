@@ -1,6 +1,7 @@
 ---
 title: 本地跑大模型：Ollama 入门与常用命令
 date: 2026-08-28 09:00:00
+type: tech
 permalink: /2026/08/28/ollama-local-llm-guide/
 tags:
   - Ollama

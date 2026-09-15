@@ -1,6 +1,7 @@
 ---
 title: 我的博客开始不再是我自己了
 date: 2026-09-09 20:00:00
+type: thought
 permalink: /2026/09/09/blogging-anonymity-public-writing/
 tags:
   - 写作

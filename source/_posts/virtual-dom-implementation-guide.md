@@ -1,6 +1,7 @@
 ---
 title: 从零实现Virtual DOM：深入理解现代前端框架的核心机制
 date: 2025-12-28 11:30:00
+type: tech
 permalink: /2025/12/28/virtual-dom-implementation/
 tags: 
   - JavaScript

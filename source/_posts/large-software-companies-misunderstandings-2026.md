@@ -1,6 +1,7 @@
 ---
 title: 大型软件公司的常见误解：规模带来的必然结果
 date: 2026-01-22 18:00:00
+type: thought
 permalink: /2026/01/22/large-software-companies-misunderstandings-2026/
 tags: 
   - 企业管理

@@ -1,6 +1,7 @@
 ---
 title: DeepSeek Harness 与 Hermes Agent：引擎与整车的区别
 date: 2026-08-20 15:00:00
+type: tech
 tags:
   - DeepSeek
   - Hermes

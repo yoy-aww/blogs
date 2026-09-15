@@ -1,6 +1,7 @@
 ---
 title: 当 AI 助手开始说"你在拖延"
 date: 2026-09-08 20:00:00
+type: thought
 permalink: /2026/09/08/when-ai-says-youre-procrastinating/
 tags:
   - AI

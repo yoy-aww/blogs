@@ -1,6 +1,7 @@
 ---
 title: DeepSeek 本地部署实战：从 RTX 3060 到多卡集群的完整方案
 date: 2026-08-20 11:00:00
+type: tech
 tags:
   - DeepSeek
   - 本地部署

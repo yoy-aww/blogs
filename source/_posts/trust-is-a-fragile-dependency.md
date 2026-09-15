@@ -1,6 +1,7 @@
 ---
 title: 信任是一种脆弱依赖
 date: 2026-09-16 22:00:00
+type: thought
 permalink: /2026/09/16/trust-is-a-fragile-dependency/
 tags:
   - 思考

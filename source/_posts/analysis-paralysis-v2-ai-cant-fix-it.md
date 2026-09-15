@@ -1,6 +1,7 @@
 ---
 title: 分析瘫痪 v2：我以为 AI 能救我
 date: 2026-09-07 20:00:00
+type: thought
 permalink: /2026/09/07/analysis-paralysis-v2-ai-cant-fix-it/
 tags:
   - 分析瘫痪

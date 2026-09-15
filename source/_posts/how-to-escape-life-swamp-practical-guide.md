@@ -1,6 +1,7 @@
 ---
 title: 如何摆脱人生困境：走出沼泽地的实用指南
 date: 2026-01-22 14:30:00
+type: thought
 permalink: /2026/01/22/how-to-escape-life-swamp-practical-guide/
 tags: 
   - 个人成长

@@ -1,6 +1,7 @@
 ---
 title: Rust编程语言入门指南：从零开始的系统编程之旅
 date: 2026-01-07 18:00:00
+type: tech
 permalink: /2026/01/07/rust-learning-guide-2026/
 tags: 
   - Rust

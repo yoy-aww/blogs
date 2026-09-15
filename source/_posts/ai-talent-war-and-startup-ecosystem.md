@@ -1,6 +1,7 @@
 ---
 title: AI人才战争：重塑创业生态的超级资本主义
 date: 2026-01-07 10:30:00
+type: thought
 permalink: /2026/01/07/ai-talent-war-and-startup-ecosystem/
 tags: 
   - AI

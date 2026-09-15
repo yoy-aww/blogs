@@ -1,6 +1,7 @@
 ---
 title: "DeepSeek Harness：把智能体框架做成插件化的 K8s"
 date: 2026-08-20 14:00:00
+type: tech
 tags:
   - AI
   - 智能体

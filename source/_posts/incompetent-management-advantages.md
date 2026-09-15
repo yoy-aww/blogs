@@ -1,6 +1,7 @@
 ---
 title: 无能管理的意外优势：为什么有时候"躺平"的管理反而更有效
 date: 2026-01-05 14:30:00
+type: thought
 permalink: /2026/01/05/incompetent-management-advantages/
 tags: 
   - 管理思考

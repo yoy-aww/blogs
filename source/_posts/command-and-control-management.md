@@ -1,6 +1,7 @@
 ---
 title: 命令与控制管理：为什么它不适合高科技团队
 date: 2025-12-02 14:00:00
+type: thought
 permalink: /2025/12/02/command-and-control-management/
 tags: 
   - 管理

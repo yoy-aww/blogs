@@ -1,6 +1,7 @@
 ---
 title: AI没有节省时间，反而制造了一种新型倦怠
 date: 2026-07-20 09:00:00
+type: tech
 permalink: /2026/07/20/ai-burnout-workload-creep/
 tags:
   - AI

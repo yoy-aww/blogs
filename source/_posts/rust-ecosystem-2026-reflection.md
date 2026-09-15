@@ -1,6 +1,7 @@
 ---
 title: Rust生态系统在2026年：从系统编程到全栈开发的演进
 date: 2026-01-07 16:00:00
+type: tech
 permalink: /2026/01/07/rust-ecosystem-2026-reflection/
 tags: 
   - Rust

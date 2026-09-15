@@ -1,6 +1,7 @@
 ---
 title: 技术并非不可避免：重新审视"这就是未来"的话术
 date: 2026-01-04 14:30:00
+type: thought
 permalink: /2026/01/04/technology-is-not-inevitable/
 tags: 
   - 技术思考

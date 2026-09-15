@@ -1,6 +1,7 @@
 ---
 title: DeepSeek + RAG + Agent：构建可落地的 AI 应用完整指南
 date: 2026-08-20 13:00:00
+type: tech
 tags:
   - DeepSeek
   - RAG

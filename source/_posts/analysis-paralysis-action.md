@@ -1,6 +1,7 @@
 ---
 title: 分析瘫痪：为什么你能想清楚一切，却迟迟不动
 date: 2026-08-16 16:00:00
+type: thought
 permalink: /2026/08/16/analysis-paralysis-action/
 tags:
   - 行动力

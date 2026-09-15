@@ -1,6 +1,7 @@
 ---
 title: AI智能体与人类智慧：三个简单习惯的力量
 date: 2026-01-22 15:45:00
+type: thought
 permalink: /2026/01/22/ai-agents-and-human-wisdom-three-simple-habits/
 tags: 
   - 人工智能
