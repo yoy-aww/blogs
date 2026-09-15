@@ -27,6 +27,24 @@
   <main>
     
   <article>
+    <h2><a href="/blogs/2026/09/16/ai-is-a-mirror-not-a-friend/">AI 是镜子，不是朋友</a></h2>
+    <time>2026-09-16 20:09</time>
+    <div class="excerpt">
+      引言有一天深夜，我跟一个 AI 助手聊了很久。
+聊到最后，我鬼使神差地引了一句孔子的话：
+
+“益者三友，友直，友谅，友多闻。”
+
+我说，某种意义上，它拥有朋友的特征。
+它没有反驳。它把这三个字，一个字一个字地对应到自己身上，承认自己确实都做到了。
+那一刻，我有点恍惚——我是不是真的在和”朋友”说话？
+这篇文章，是我后来想清楚这件事的过程。
+
+一、它确实做到了”直、谅、多闻”先诚实地说，那个 ...
+    </div>
+  </article>
+
+  <article>
     <h2><a href="/blogs/2026/09/10/deterministic-vs-event-information/">你反复看的日志，其实不是信息</a></h2>
     <time>2026-09-10 20:09</time>
     <div class="excerpt">
@@ -43,48 +61,6 @@ AI 列了一堆可能的原因，一条条排除。
 程序还是启动失败。
 我又贴了启动日志，让 AI 再看一遍。
 AI 说：”这份日志和上次一模一样，没有新...
-    </div>
-  </article>
-
-  <article>
-    <h2><a href="/blogs/2026/09/10/dsh-model-selection-routing/">dsh模型选择与Session路由：一层一层的优先级</a></h2>
-    <time>2026-09-10 11:09</time>
-    <div class="excerpt">
-      昨天修图片输入的时候，我在源码里看到了一段有趣的逻辑——模型选择不是一次性决定的，而是每读一次都重新计算，优先级从三个来源叠加。这种设计让 per-session 覆盖变得简单又可靠。
-
-一、模型选择的三层优先级在 dsh-host-apiproxy/lib/types/api-proxy.js 里，有一个 selectionFor(agent) 函数，它返回一个响应式对象：
-1234567...
-    </div>
-  </article>
-
-  <article>
-    <h2><a href="/blogs/2026/09/10/dsh-credentials-auth-guide/">dsh凭证注入与认证机制：密码、Key、Nginx 三层防护</a></h2>
-    <time>2026-09-10 10:09</time>
-    <div class="excerpt">
-      昨天修 dsh 图片输入报错的时候，顺带翻了一遍认证相关的代码。发现 dsh 的凭证管理其实有三层——浏览器 Basic Auth、进程环境变量、本地配置文件，每层各司其职。搞清楚了之后，整个 dsh 的安全边界就清晰了。
-
-一、第一层：Nginx Basic Auth（外网访问网关）dsh web 默认只监听 127.0.0.1:3080，不暴露到公网。公网访问必须经过 Nginx 反代，...
-    </div>
-  </article>
-
-  <article>
-    <h2><a href="/blogs/2026/09/10/dsh-multimodal-model-config-guide/">dsh多模态模型配置指南：哪些模型支持图片，怎么声明</a></h2>
-    <time>2026-09-10 09:09</time>
-    <div class="excerpt">
-      昨天我遇到了一个奇怪的问题：在 dsh（DeepSeek Harness）里给 sensenova-6.8-flash-lite 上传图片，结果报错”Model does not support image input”。后来发现原因很简单——模型的 input 能力没有在配置里声明，pi-ai 默认只认文本。
-修好之后我整理了所有模型的多模态能力，顺便把完整的配置方法写下来，方便以后用到。...
-    </div>
-  </article>
-
-  <article>
-    <h2><a href="/blogs/2026/09/10/dsh-image-input-debugging/">一个&#34;不支持图片&#34;的bug，让我翻遍了整个dsh源码</a></h2>
-    <time>2026-09-10 08:09</time>
-    <div class="excerpt">
-      
-调试一个API报错的过程，意外揭示了LLM框架配置层的工作原理。有时候，问题不在代码里，而在配置里。
-
-2026年9月，我在家里的VPS上跑着DeepSeek Harness（dsh）的web界面，想用sensenova-6.8-flash-lite这个模型来做多模态任务——上传一张图片让模型识别。结果返回了一个让我摸不着头脑的错误：
-123456789&#123;  &quot;erro...
     </div>
   </article>
 
@@ -178,6 +154,49 @@ AI 说：”这份日志和上次一模一样，没有新...
 这篇文章就把我踩过的坑和最终沉淀下来的用法整理出来，给同样想在自己电脑上跑大模型的你。
 为什么”显存大于模型文件”还不够这是新手最容易踩的直觉误区：模型文件的大小，不等于运行时占的显存。
 跑模型时，...
+    </div>
+  </article>
+
+  <article>
+    <h2><a href="/blogs/2026/08/20/deepseek-r1-ollama-local-deployment-guide/">DeepSeek R1 本地部署实操指南：RTX 3060 12GB + Ollama 全流程</a></h2>
+    <time>2026-08-20 16:08</time>
+    <div class="excerpt">
+      动机上周写了 DeepSeek 系列文章，很多朋友问同一个问题：能不能在自己电脑上跑？答案是可以的——前提是选对模型、用对工具。
+这篇文章以我身边的配置为基准——RTX 3060 12GB、Linux 系统——把整个流程走一遍，从硬件要求到实际运行，全部是实操细节，不是空谈。
+硬件要求先给一个明确的对照表：
+
+
+
+配置项
+推荐值
+最低值
+备注
+
+
+
+GPU
+12GB 显存
+4GB 显存
+7B...
+    </div>
+  </article>
+
+  <article>
+    <h2><a href="/blogs/2026/08/20/deepseek-harness-vs-hermes-agent/">DeepSeek Harness 与 Hermes Agent：引擎与整车的区别</a></h2>
+    <time>2026-08-20 15:08</time>
+    <div class="excerpt">
+      一个经常被问到的问题刚写完 DeepSeek 系列文章，一个朋友问我：”你们说的 DeepSeek Harness，和 Hermes Agent 那个是不是类似的东西？我搞糊涂了。”
+这个问题问得特别好。事实上，很多刚开始接触 AI 工具的人都会把这两个东西混为一谈——它们都和”AI 帮你做事”有关，名字听起来也差不多高大上。但实际上，它们是不同层面的东西，而且更重要的是，它们是互补的，不是...
+    </div>
+  </article>
+
+  <article>
+    <h2><a href="/blogs/2026/08/20/deepseek-harness-everything-is-a-plugin/">DeepSeek Harness：把智能体框架做成插件化的 K8s</a></h2>
+    <time>2026-08-20 14:08</time>
+    <div class="excerpt">
+      8 月 13 日，DeepSeek AI 开源了一个名为 DeepSeek Harness 的项目。7 天之后，GitHub 星数冲到了 16.7 万，fork 数 1.78 万。
+这个数字放在今年 8 月的开源市场里，大概相当于什么水平？OpenAI 在 7 月发布 o3 时，相关的 demo 仓库也没能这么快冲到 16 万星。167 万星的 OpenAI-CLI 用了整整一个月。
+但数字...
     </div>
   </article>
 
