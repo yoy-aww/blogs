@@ -1,43 +1,55 @@
 <%
 // 搜索页：展示全部文章，客户端做搜索和过滤
-// 从 site.posts 获取全量数据（不走分页）
+// 从 post.content（已渲染的 HTML）中截取纯文本作为搜索摘要
+function stripHtml(html) {
+  if (!html) return '';
+  return html
+    .replace(/<script[\s\S]*?<\/script>/g, ' ')
+    .replace(/<style[\s\S]*?<\/style>/g, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 var allPosts = [];
 site.posts.each(function(post) {
+  var excerptText = '';
+  if (post.excerpt) {
+    excerptText = stripHtml(post.excerpt);
+  } else if (post.content) {
+    excerptText = stripHtml(post.content).slice(0, 200);
+  }
   allPosts.push({
     title: post.title,
     path: post.path,
     type: post.type || 'thought',
+    date: post.date.toISOString().slice(0, 10),
     dateLabel: post.date.format('YYYY-MM-DD HH:MM'),
     tags: (post.tags || []).map(function(t) { return t.name; }),
-    excerpt: (post.excerpt || '').slice(0, 200)
+    excerpt: excerptText
   });
 });
-// 写入 window.posts 供 search.js 使用
-// 同时直接渲染全部文章 HTML 作为 fallback
 -%>
-
-<% if (typeof window === 'undefined'){ %>
-<script>
-  window.posts = <%- JSON.stringify(allPosts) %>;
-</script>
-<% } %>
 
 <div class="search-results-header">
   <span class="result-count" id="result-count"></span>
 </div>
 
 <div class="post-list search-post-list" id="post-list">
-  <% allPosts.forEach(function(post){ %><% var p = post; %>
+  <% allPosts.forEach(function(p){ %>
   <article class="post-item" data-type="<%= p.type %>" data-title="<%- p.title.replace(/"/g,'&quot;') %>" data-tags="<%- p.tags.join(',').replace(/"/g,'&quot;') %>">
     <div class="post-item-header">
       <h2><a href="<%- url_for(p.path) %>"><%= p.title %></a></h2>
       <time><%= p.dateLabel %></time>
     </div>
     <div class="post-meta-row">
-      <% var typeBadge = p.type === 'tech'
-        ? '<span class="type-badge type-badge--tech">技术</span>'
-        : '<span class="type-badge type-badge--thought">思想</span>'; %>
-      <%- typeBadge %>
+      <span class="type-badge type-badge--<%= p.type === 'tech' ? 'tech' : 'thought' %>"><%= p.type === 'tech' ? '技术' : '思想' %></span>
       <% p.tags.forEach(function(tag){ %>
         <a href="<%- url_for('/tags/' + tag.path + '/') %>" class="post-tag">#<%= tag.name %></a>
       <% }) %>
@@ -58,7 +70,5 @@ site.posts.each(function(post) {
 <% } %>
 
 <script>
-  if (typeof window.posts === 'undefined' || window.posts.length === 0) {
-    window.posts = <%- JSON.stringify(allPosts) %>;
-  }
+  window.posts = <%- JSON.stringify(allPosts) %>;
 </script>

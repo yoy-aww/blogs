@@ -27,8 +27,9 @@
       <% if (page.layout === 'search'){ %>
         <div class="filter-row">
           <span class="filter-label">类型过滤：</span>
-          <a href="<%- url_for(theme.menu['思想博客']) %>" class="filter-btn filter-btn--thought">思想博客</a>
-          <a href="<%- url_for(theme.menu['技术博客']) %>" class="filter-btn filter-btn--tech">技术博客</a>
+          <a href="<%- url_for('/search/') %>" class="filter-btn filter-btn--all" data-type="all">全部</a>
+          <a href="<%- url_for(theme.menu['思想博客']) %>" class="filter-btn filter-btn--thought" data-type="thought">思想博客</a>
+          <a href="<%- url_for(theme.menu['技术博客']) %>" class="filter-btn filter-btn--tech" data-type="tech">技术博客</a>
         </div>
       <% } %>
     </div>

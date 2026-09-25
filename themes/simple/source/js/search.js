@@ -79,9 +79,9 @@
       // 更新过滤按钮状态
       var btns = document.querySelectorAll('.filter-btn');
       btns.forEach(function(btn) {
-        var btnType = btn.getAttribute('data-type') ||
-          (btn.className.indexOf('filter-btn--thought') >= 0 ? 'thought' : 'tech');
-        if (btnType === type) {
+        var btnType = btn.getAttribute('data-type');
+        var isActive = (btnType === 'all' && !type) || btnType === type;
+        if (isActive) {
           btn.classList.add('filter-btn--active');
         } else {
           btn.classList.remove('filter-btn--active');
@@ -91,9 +91,9 @@
       // 更新首页过滤按钮状态（如果存在）
       var homeBtns = document.querySelectorAll('.filter-btn-home');
       homeBtns.forEach(function(btn) {
-        var btnType = btn.getAttribute('data-type') ||
-          (btn.className.indexOf('filter-btn--thought') >= 0 ? 'thought' : 'tech');
-        if (btnType === type) {
+        var btnType = btn.getAttribute('data-type');
+        var isActive = (btnType === 'all' && !type) || btnType === type;
+        if (isActive) {
           btn.classList.add('filter-btn--active');
         } else {
           btn.classList.remove('filter-btn--active');
@@ -114,14 +114,17 @@
     document.querySelectorAll('.filter-btn, .filter-btn-home').forEach(function(btn) {
       btn.addEventListener('click', function(e) {
         e.preventDefault();
-        var type = btn.getAttribute('data-type') ||
-          (btn.className.indexOf('filter-btn--thought') >= 0 ? 'thought' : 'tech');
-        // 再次点击同一类型 = 取消过滤
-        if (currentType === type) {
+        var type = btn.getAttribute('data-type');
+        // "全部" = 取消类型过滤
+        if (type === 'all') {
           currentType = null;
-          btn.classList.remove('filter-btn--active');
         } else {
-          currentType = type;
+          // 再次点击同一类型 = 取消过滤
+          if (currentType === type) {
+            currentType = null;
+          } else {
+            currentType = type;
+          }
         }
         filterAndRender(input.value, currentType);
 
